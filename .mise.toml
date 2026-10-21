@@ -1,0 +1,111 @@
+# 项目级工具链与命令入口。不要使用 mise use -g 修改全局版本。
+min_version = "2024.9.5"
+
+[tools]
+node = "24"
+pnpm = "12.10.1"
+python = "3.13"
+uv = "0.12.3"
+
+[env]
+_.file = ".env"
+_.path = ["{{config_root}}/node_modules/.bin"]
+
+[tasks.setup]
+description = "初始化 Node、Python 和项目依赖"
+run = ["\"{{mise_bin}}\" install", "bash scripts/setup.sh"]
+
+[tasks.env-check]
+description = "检查项目工具链和 Cloudflare 配置"
+run = [
+  "\"{{mise_bin}}\" current",
+  "node --version",
+  "pnpm --version",
+  "python --version",
+  "uv --version",
+  "if [ -f .env ]; then echo '.env: present'; else echo '.env: missing'; fi",
+  "node scripts/check-cloudflare.mjs --status",
+]
+
+[tasks.dev]
+description = "启动 Web、网关和 Python Worker 开发服务"
+run = "pnpm dev"
+
+[tasks.dev-web]
+description = "启动 Next.js Web"
+run = "pnpm dev:web"
+
+[tasks.dev-python]
+description = "启动 Python Cloudflare Worker"
+run = "pnpm dev:python"
+
+[tasks.dev-worker]
+description = "启动 Cloudflare Worker 本地开发服务"
+run = "pnpm dev:worker"
+
+[tasks.dev-python-local]
+description = "通过 CPython 和 Uvicorn 启动 FastAPI"
+run = "uv run --project apps/python python -m hotkey_tools.main"
+
+[tasks.build]
+description = "构建全部应用"
+run = "pnpm run build"
+
+[tasks.check-types]
+description = "检查 TypeScript 和 Python 类型"
+run = "pnpm check-types"
+
+[tasks.lint]
+description = "运行 Oxlint 和 Ruff"
+run = "pnpm lint"
+
+[tasks.test]
+description = "运行全部应用测试"
+run = "pnpm test"
+
+[tasks.smoke]
+description = "检查 mise run dev 的实际 HTTP 与 D1/Python 链路"
+run = "node scripts/smoke.mjs"
+
+[tasks.format]
+description = "格式化 Web、配置和 Python 源码"
+run = "pnpm format"
+
+[tasks.verify]
+description = "执行全仓类型、lint、格式、测试和构建检查"
+run = [
+  "pnpm check-types",
+  "pnpm lint",
+  "pnpm format:check",
+  "pnpm test",
+  "pnpm build",
+  "pnpm run deploy:dry-run",
+]
+
+[tasks.cloudflare-login]
+description = "登录 Cloudflare 账户"
+run = "pnpm --filter @hotkey-tools/worker exec wrangler login"
+
+[tasks.cloudflare-status]
+description = "读取 Cloudflare 登录状态"
+run = "pnpm --filter @hotkey-tools/worker exec wrangler whoami"
+
+[tasks.cloudflare-db-migrate-local]
+description = "初始化本地 D1 数据库结构"
+run = "pnpm cloudflare:db:migrate:local"
+
+[tasks.deploy-dry-run]
+description = "检查两个 Worker 的发布打包，不创建远端资源"
+run = "pnpm run deploy:dry-run"
+
+[tasks.cloudflare-db-create]
+description = "创建 Cloudflare D1 数据库并输出 database_id"
+run = "pnpm cloudflare:db:create"
+
+[tasks.cloudflare-db-migrate]
+description = "将 D1 migrations 应用到远端数据库"
+run = "pnpm cloudflare:db:migrate"
+
+[tasks.deploy]
+description = "构建 Web 并部署 Cloudflare Worker、静态资源和 D1 API"
+run = "node scripts/check-cloudflare.mjs && pnpm run deploy"

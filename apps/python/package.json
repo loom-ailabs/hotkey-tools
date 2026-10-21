@@ -1,0 +1,19 @@
+{
+  "name": "@hotkey-tools/python",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run pywrangler dev",
+    "dev:local": "uv run python -m hotkey_tools.main",
+    "build": "uv run python -m compileall -q src",
+    "check-types": "uv run mypy src",
+    "lint": "uv run ruff check . && uv run ruff format --check .",
+    "test": "uv run pytest",
+    "format": "uv run ruff format .",
+    "deploy": "uv run pywrangler deploy",
+    "deploy:dry-run": "uv run pywrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "wrangler": "^4.127.1"
+  }
+}

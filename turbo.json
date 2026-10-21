@@ -1,0 +1,31 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
+  "remoteCache": { "enabled": false },
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "out/**", "dist/**", "!.next/cache/**"]
+    },
+    "@hotkey-tools/python#build": {
+      "outputs": []
+    },
+    "@hotkey-tools/worker#build": {
+      "outputs": []
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

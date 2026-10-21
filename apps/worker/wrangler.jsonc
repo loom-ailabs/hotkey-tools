@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hotkey-tools",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-21",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "assets": {
+    "directory": "../web/out",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hotkey-tools",
+      // 仅作为本地 D1 标识。创建远端数据库后替换为实际 UUID。
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "services": [
+    {
+      "binding": "PYTHON_SERVICE",
+      "service": "hotkey-tools-python",
+    },
+  ],
+}

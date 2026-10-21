@@ -1,0 +1,39 @@
+{
+  "name": "hotkey-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "pnpm --filter @hotkey-tools/web dev",
+    "dev:worker": "pnpm --filter @hotkey-tools/worker dev",
+    "dev:python": "pnpm --filter @hotkey-tools/python dev",
+    "build": "turbo run build",
+    "check-types": "turbo run check-types",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "format": "oxfmt --write . && pnpm --filter @hotkey-tools/python format",
+    "format:check": "oxfmt --check .",
+    "python:check-types": "pnpm --filter @hotkey-tools/python check-types",
+    "python:lint": "pnpm --filter @hotkey-tools/python lint",
+    "python:test": "pnpm --filter @hotkey-tools/python test",
+    "setup": "mise run setup",
+    "verify": "mise run verify",
+    "cloudflare:db:create": "pnpm --filter @hotkey-tools/worker exec wrangler d1 create hotkey-tools",
+    "cloudflare:db:migrate:local": "pnpm --filter @hotkey-tools/worker exec wrangler d1 migrations apply hotkey-tools --local",
+    "cloudflare:db:migrate": "node scripts/check-cloudflare.mjs && pnpm --filter @hotkey-tools/worker exec wrangler d1 migrations apply hotkey-tools --remote",
+    "deploy": "node scripts/check-cloudflare.mjs && pnpm --filter @hotkey-tools/python run deploy && pnpm --filter @hotkey-tools/worker run deploy",
+    "deploy:dry-run": "pnpm --filter @hotkey-tools/web build && pnpm --filter @hotkey-tools/python run deploy:dry-run && pnpm --filter @hotkey-tools/worker run deploy:dry-run"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
+    "turbo": "^2.10.3",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=12.0.0"
+  },
+  "packageManager": "pnpm@12.10.1"
+}

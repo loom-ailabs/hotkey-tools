@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "name": "hotkey-tools-python",
+  "main": "src/worker.py",
+  "compatibility_date": "2026-10-21",
+  "compatibility_flags": ["python_workers"],
+  "workers_dev": false,
+  "dev": {
+    "port": 8788,
+  },
+}
