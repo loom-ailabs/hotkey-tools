@@ -6,6 +6,19 @@ resolution-markers = [
     "python_full_version < '3.15'",
 ]
 
+[manifest]
+members = [
+    "hotkey-tools-core",
+    "hotkey-tools-python",
+]
+
+[manifest.dependency-groups]
+dev = [
+    { name = "mypy", specifier = ">=1.15,<2" },
+    { name = "pytest", specifier = ">=8.3,<9" },
+    { name = "ruff", specifier = ">=0.11,<1" },
+]
+
 [[package]]
 name = "annotated-doc"
 version = "0.0.5"
@@ -91,20 +104,23 @@ wheels = [
 ]
 
 [[package]]
+name = "hotkey-tools-core"
+version = "0.1.0"
+source = { editable = "packages/python/hotkey-core" }
+
+[[package]]
 name = "hotkey-tools-python"
 version = "0.1.0"
-source = { editable = "." }
+source = { editable = "apps/python" }
 dependencies = [
     { name = "fastapi" },
+    { name = "hotkey-tools-core" },
     { name = "pydantic" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "httpx" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "ruff" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "workers-py" },
     { name = "workers-runtime-sdk" },
@@ -113,15 +129,13 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115,<1" },
+    { name = "hotkey-tools-core", editable = "packages/python/hotkey-core" },
     { name = "pydantic", specifier = ">=2.10,<3" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx", specifier = ">=0.28,<1" },
-    { name = "mypy", specifier = ">=1.15,<2" },
-    { name = "pytest", specifier = ">=8.3,<9" },
-    { name = "ruff", specifier = ">=0.11,<1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34,<1" },
     { name = "workers-py" },
     { name = "workers-runtime-sdk" },

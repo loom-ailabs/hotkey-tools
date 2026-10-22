@@ -3,6 +3,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from pydantic import BaseModel, Field, field_validator
 
+from hotkey_tools_core import normalize_combination
+
 app = FastAPI(title="hotkey-tools Python service", version="0.1.0")
 
 
@@ -19,11 +21,6 @@ class NormalizeRequest(BaseModel):
 
 class NormalizeResponse(BaseModel):
     combination: str
-
-
-def normalize_combination(value: str) -> str:
-    parts = [part.strip() for part in value.split("+") if part.strip()]
-    return " + ".join(part[:1].upper() + part[1:].lower() for part in parts)
 
 
 @app.get("/health")

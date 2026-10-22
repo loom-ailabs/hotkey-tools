@@ -23,6 +23,10 @@ version = "0.156.4"
 wheels = [{ url = "https://files.pythonhosted.org/packages/4a/58/eea5c844003eec82d2423c5393495808291e5c1ddfee266f169375c588a5/fastapi-0.156.4-py3-none-any.whl", upload-time = 2026-10-20T23:00:23Z, size = 147143, hashes = { sha256 = "a09d29fdd6635e94ae00199bae331a04350e0e46ba4334d50809007cd3119db5" } }]
 
 [[packages]]
+name = "hotkey-tools-core"
+directory = { path = "../../packages/python/hotkey-core", editable = true }
+
+[[packages]]
 name = "idna"
 version = "3.20"
 wheels = [{ url = "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl", upload-time = 2026-09-17T14:11:03Z, size = 69583, hashes = { sha256 = "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c" } }]

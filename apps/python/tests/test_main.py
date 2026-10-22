@@ -1,11 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from hotkey_tools.main import app, normalize_combination
-
-
-def test_normalize_combination() -> None:
-    assert normalize_combination(" ctrl + shift + p ") == "Ctrl + Shift + P"
+from hotkey_tools.main import app
 
 
 def test_health() -> None:

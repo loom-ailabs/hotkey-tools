@@ -181,6 +181,9 @@ importers:
 
   apps/python:
     devDependencies:
+      '@hotkey-tools/python-core':
+        specifier: workspace:*
+        version: link:../../packages/python/hotkey-core
       wrangler:
         specifier: ^4.127.1
         version: 4.151.2(@cloudflare/workers-types@5.20261019.1)(@types/node@24.19.2)
@@ -252,6 +255,8 @@ importers:
       wrangler:
         specifier: ^4.24.0
         version: 4.151.2(@cloudflare/workers-types@5.20261019.1)(@types/node@24.19.2)
+
+  packages/python/hotkey-core: {}
 
 packages:
 

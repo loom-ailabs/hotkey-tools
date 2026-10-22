@@ -1,0 +1,12 @@
+{
+  "name": "@hotkey-tools/python-core",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "uv build --package hotkey-tools-core --out-dir dist",
+    "check-types": "uv run --locked --package hotkey-tools-core mypy src",
+    "lint": "uv run --locked --package hotkey-tools-core ruff check src tests && uv run --locked --package hotkey-tools-core ruff format --check src tests",
+    "test": "uv run --locked --package hotkey-tools-core pytest tests",
+    "format": "uv run --locked --package hotkey-tools-core ruff format src tests"
+  }
+}

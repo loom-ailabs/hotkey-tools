@@ -45,7 +45,15 @@ run = "pnpm dev:worker"
 
 [tasks.dev-python-local]
 description = "通过 CPython 和 Uvicorn 启动 FastAPI"
-run = "uv run --project apps/python python -m hotkey_tools.main"
+run = "uv run --locked --package hotkey-tools-python python -m hotkey_tools.main"
+
+[tasks.python-sync]
+description = "同步整个 uv workspace 的 Python 包和开发依赖"
+run = 'uv sync --locked --all-packages --python "$(command -v python)"'
+
+[tasks.python-lock]
+description = "更新整个 uv workspace 的统一锁文件"
+run = "uv lock"
 
 [tasks.build]
 description = "构建全部应用"
@@ -74,6 +82,7 @@ run = "pnpm format"
 [tasks.verify]
 description = "执行全仓类型、lint、格式、测试和构建检查"
 run = [
+  "uv lock --check",
   "pnpm check-types",
   "pnpm lint",
   "pnpm format:check",

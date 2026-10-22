@@ -3,7 +3,10 @@ name = "hotkey-tools-python"
 version = "0.1.0"
 description = "FastAPI service for hotkey-tools on Cloudflare Python Workers"
 requires-python = ">=3.13"
-dependencies = ["fastapi>=0.115,<1", "pydantic>=2.10,<3"]
+dependencies = ["fastapi>=0.115,<1", "hotkey-tools-core", "pydantic>=2.10,<3"]
+
+[tool.uv.sources]
+hotkey-tools-core = { workspace = true }
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]
@@ -13,30 +16,7 @@ build-backend = "hatchling.build"
 packages = ["src/hotkey_tools"]
 
 [dependency-groups]
-dev = [
-  "httpx>=0.28,<1",
-  "mypy>=1.15,<2",
-  "pytest>=8.3,<9",
-  "ruff>=0.11,<1",
-  "uvicorn[standard]>=0.34,<1",
-  "workers-py",
-  "workers-runtime-sdk",
-]
+dev = ["httpx>=0.28,<1", "uvicorn[standard]>=0.34,<1", "workers-py", "workers-runtime-sdk"]
 
 [tool.uv]
 package = true
-
-[tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
-
-[tool.mypy]
-python_version = "3.13"
-strict = true
-
-[tool.ruff]
-target-version = "py313"
-line-length = 120
-
-[tool.ruff.lint]
-select = ["E", "F", "I"]

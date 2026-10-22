@@ -1,5 +1,6 @@
 packages:
   - apps/*
+  - packages/python/*
 
 autoInstallPeers: false
 strictPeerDependencies: false

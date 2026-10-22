@@ -1,0 +1,22 @@
+# 多语言仓库的 Python workspace 根：不声明 [project] 或构建后端。
+[tool.uv.workspace]
+members = ["apps/python", "packages/python/*"]
+
+[dependency-groups]
+dev = ["mypy>=1.15,<2", "pytest>=8.3,<9", "ruff>=0.11,<1"]
+
+[tool.pytest.ini_options]
+testpaths = ["apps/python/tests", "packages/python"]
+norecursedirs = [".*", "node_modules", "python_modules", "dist", "out"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+src = ["apps/python/src", "packages/python/*/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

@@ -1,6 +1,5 @@
 {
   "name": "hotkey-tools",
-  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,11 +11,11 @@
     "check-types": "turbo run check-types",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "format": "oxfmt --write . && pnpm --filter @hotkey-tools/python format",
+    "format": "oxfmt --write . && pnpm --filter '@hotkey-tools/python*' format",
     "format:check": "oxfmt --check .",
-    "python:check-types": "pnpm --filter @hotkey-tools/python check-types",
-    "python:lint": "pnpm --filter @hotkey-tools/python lint",
-    "python:test": "pnpm --filter @hotkey-tools/python test",
+    "python:check-types": "pnpm --filter '@hotkey-tools/python*' check-types",
+    "python:lint": "pnpm --filter '@hotkey-tools/python*' lint",
+    "python:test": "pnpm --filter '@hotkey-tools/python*' test",
     "setup": "mise run setup",
     "verify": "mise run verify",
     "cloudflare:db:create": "pnpm --filter @hotkey-tools/worker exec wrangler d1 create hotkey-tools",

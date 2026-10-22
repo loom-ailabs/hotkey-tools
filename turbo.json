@@ -2,6 +2,7 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
   "remoteCache": { "enabled": false },
+  "globalDependencies": ["pyproject.toml", "uv.lock"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -9,7 +10,10 @@
       "outputs": [".next/**", "out/**", "dist/**", "!.next/cache/**"]
     },
     "@hotkey-tools/python#build": {
-      "outputs": []
+      "outputs": ["dist/**"]
+    },
+    "@hotkey-tools/python-core#build": {
+      "outputs": ["dist/**"]
     },
     "@hotkey-tools/worker#build": {
       "outputs": []

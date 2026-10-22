@@ -7,5 +7,5 @@ if [[ ! -f .env ]]; then
 fi
 
 pnpm install --frozen-lockfile
-uv sync --locked --project apps/python
+uv sync --locked --all-packages --python "$(command -v python)"
 pnpm cloudflare:db:migrate:local
