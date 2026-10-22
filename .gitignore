@@ -3,6 +3,7 @@ node_modules/
 .turbo/
 .next/
 .next-dev/
+.open-next/
 *.tsbuildinfo
 out/
 dist/
@@ -18,9 +19,12 @@ __pycache__/
 
 .wrangler/
 .dev.vars
+.dev.vars.*
 .env
 .env.*
 !.env.example
 .mise.local.toml
 
 .DS_Store
+.codex-artifacts/
+draft_*_folder/

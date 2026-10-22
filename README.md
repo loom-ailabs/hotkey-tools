@@ -1,119 +1,128 @@
 # hotkey-tools
 
-参考 `evals-grader` 初始化的 Web 与 Python 工程。使用 mise 统一管理工具版本和开发命令，pnpm workspace + Turbo 编排应用与共享包，uv workspace 统一管理所有 Python package。
+默认应用是 `apps/identity`：使用 Next.js 在同一服务提供账户页面和业务 API，接入 Logto 登录、Stripe Sandbox 单次购买和 Cloudflare D1 权益记录，通过 OpenNext 部署为一个 Cloudflare Worker。
 
-| 应用          | 技术栈                                                   | 职责                                                               |
-| ------------- | -------------------------------------------------------- | ------------------------------------------------------------------ |
-| `apps/web`    | Next.js 16、React 19、TypeScript、Tailwind CSS 4、Vitest | 静态 Web；`src/app` 负责框架适配，产品页面放在 `src/_pages`        |
-| `apps/worker` | TypeScript、Hono、Wrangler                               | 托管静态资源、D1 示例 API、转发 Python 请求                        |
-| `apps/python` | Python 3.13、FastAPI、Pydantic、uv、pytest、Ruff、mypy   | 快捷键规范化示例；可在 CPython 和 Cloudflare Python Workers 中运行 |
+从初始化、身份源配置到支付联调的步骤见 [Identity 应用说明](apps/identity/README.md)。仓库工作约定见 [AGENTS.md](AGENTS.md)。
 
-Web 沿用参考项目的 Next.js 技术栈，使用静态导出部署到 Workers Static Assets。目前不包含 Next.js 的 SSR、Server Actions 和 Node route handlers。Python 通过 Cloudflare 官方 ASGI 适配部署为独立 Worker，网关通过 service binding 调用；生产环境无需单独运行 Uvicorn。
+## 应用与共享包
 
-## Workspace 组织
+| 目录                          | 技术栈                                                        | 职责                                                      |
+| ----------------------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
+| `apps/identity`               | Next.js 16、React 19、Tailwind CSS 4、Logto、Stripe、OpenNext | 默认产品：账户、购买、订单与付费鉴权；页面和 API 同源     |
+| `packages/ui`                 | shadcn/ui 风格组件、Tailwind 主题变量、`cn()`                 | 共享 Button、Card、Badge、Alert 等基础组件                |
+| `apps/web`                    | Next.js 16、React 19、TypeScript                              | 既有静态导出 Web 示例                                     |
+| `apps/worker`                 | TypeScript、Hono、Wrangler、D1                                | 既有静态资源托管、示例 API 与 Python service binding 网关 |
+| `apps/python`                 | Python 3.13、FastAPI、Pydantic                                | 快捷键规范化示例，可运行于 CPython 或 Python Worker       |
+| `packages/python/hotkey-core` | Python、uv workspace                                          | Python 共享业务库                                         |
 
-仓库根目录只承担 workspace 与工具配置职责。根 `pyproject.toml` 不含 `[project]` 或 `[build-system]`，因此不会生成或安装一个名为 `hotkey-tools` 的 Python package。根 `package.json` 是私有的任务编排配置，不承载应用代码。
+新产品使用 `apps/<产品名>` 下的独立 Next.js 全栈应用。`apps/web` 与 `apps/worker` 保留作示例，不承载 Identity 的登录和支付逻辑。Python 仅在实际需要时作为独立能力服务使用。
 
-```text
-pyproject.toml                         # uv workspace、开发工具、Ruff/mypy/pytest 配置
-uv.lock                                # 所有 Python 成员共用的依赖锁
-.venv/                                 # 共用的本地开发环境，不提交
-apps/python/
-  pyproject.toml                       # FastAPI 应用 hotkey-tools-python
-  pylock.toml                          # Cloudflare Pyodide 平台的部署依赖锁
-  src/hotkey_tools/
-  src/worker.py
-packages/python/hotkey-core/
-  pyproject.toml                       # 共享库 hotkey-tools-core
-  src/hotkey_tools_core/
-```
+## 初始化与日常开发
 
-目前 uv workspace 包含 `apps/python` 和 `packages/python/*`。FastAPI 通过 `[project].dependencies` 声明 `hotkey-tools-core`，再用 `[tool.uv.sources]` 的 `workspace = true` 指向本仓库成员。快捷键规范化函数位于共享库，应用负责 HTTP 输入校验与响应。
-
-所有成员共用根 `uv.lock` 和 `.venv`，开发工具依赖集中在根 `[dependency-groups].dev`；各成员自行声明运行时依赖、专用开发依赖与构建后端。相关规则见 [uv workspace 文档](https://docs.astral.sh/uv/concepts/projects/workspaces/)。
-
-```bash
-mise run python-sync     # uv sync --locked --all-packages，同步整个 workspace
-mise run python-lock     # uv lock，统一更新所有成员的依赖锁
-mise exec -- uv tree --locked --depth 1
-mise exec -- uv run --locked --all-packages pytest
-```
-
-`uv run --package` 选择 workspace 成员的依赖环境，不改变当前目录。Wrangler 必须在 `apps/python` 目录读取应用配置，因此继续使用 `mise run dev-python`、`deploy-dry-run` 等入口；这些命令通过 pnpm 切到应用目录再执行。
-
-新增共享 Python 包时，在 `packages/python/<目录>/` 下添加该包自己的 `pyproject.toml` 和源码；应用声明成员依赖及 `workspace = true`，再运行 `mise run python-lock` 和 `mise run python-sync`。成员中的私有 `package.json` 仅用于接入 Turbo 任务图；应用适配配置通过 workspace 依赖关联共享库，使库修改能触发对应检查和构建。
-
-Cloudflare 的 `pylock.toml` 与 `.venv-workers` 服务于 Pyodide/WASM，保留在应用目录；它们不替代根 `uv.lock` 和开发环境。每次启动或部署前强制同步发布依赖，把共享库源码打包进 Worker，避免部署产物引用宿主机器的 editable 安装路径。修改共享库后重新执行启动命令即可更新本地 Worker。
-
-## 初始化与开发
-
-安装 mise 后，在项目根目录执行：
+安装 mise 后，在仓库根目录执行：
 
 ```bash
 mise trust
 mise run setup
 mise run env-check
+mise run dev
 ```
 
-`setup` 安装项目工具链、按锁文件安装 pnpm 依赖和所有 uv workspace 成员、在缺失时从 `.env.example` 创建 `.env`，并应用本地 D1 migrations。重复执行不会覆盖 `.env` 或重置已有数据。首次运行 Python Worker 时，pywrangler 还会下载 Workers 专用 Python/WASM 运行时。
+默认访问 `http://localhost:3001`。`dev` 会先应用 Identity 本地 D1 migrations，再启动 Next.js 开发服务器；Cloudflare bindings 由 OpenNext 提供本地模拟。
 
-```bash
-mise run dev               # 同时启动三个应用
-mise run dev-web           # Next.js 热更新，http://localhost:3000
-mise run dev-worker        # 构建 Web、迁移本地 D1，再启动网关 http://localhost:8787
-mise run dev-python        # Python Worker，http://localhost:8788
-mise run dev-python-local  # 可选：CPython + Uvicorn，http://localhost:8000
-```
+`setup` 安装工具链、按锁文件安装 pnpm 依赖及 uv workspace 成员，在文件缺失时创建根 `.env`、Identity 的 `.env.local` 与 `.dev.vars`，并应用两个示例数据库的本地迁移。重复执行不会覆盖已有环境文件或重置数据库。Logto 和 Stripe 凭据仍需按 [应用说明](apps/identity/README.md) 配置；配置不完整时，页面会显示服务待配置，相关 API 返回 503。
 
-访问 `http://localhost:8787` 可以预览部署结构中的静态 Web；网关会调用同时运行的 Python Worker。`dev-web` 提供前端热更新，网关中的静态资源在重新构建 Web 后更新。
+| 命令                                     | 用途                                           |
+| ---------------------------------------- | ---------------------------------------------- |
+| `mise run dev` / `mise run dev-identity` | 启动默认账户与购买应用，端口 3001              |
+| `mise run smoke`                         | 对默认应用做页面、D1、私有 API 与跨站拒绝检查  |
+| `mise run dev-examples`                  | 启动既有静态 Web、网关和 Python Worker 示例    |
+| `mise run dev-web`                       | 既有静态 Web 热更新，端口 3000                 |
+| `mise run dev-worker`                    | 构建静态 Web、迁移示例 D1、启动网关，端口 8787 |
+| `mise run dev-python`                    | Python Worker，端口 8788                       |
+| `mise run dev-python-local`              | CPython + Uvicorn，端口 8000                   |
+| `mise run smoke-examples`                | 检查既有网关、D1 与 Python 链路                |
 
-mise 固定 Node.js 24、pnpm 12.10.1、Python 3.13、uv 0.12.3。工具版本与任务放在 `.mise.toml`，运行时配置放在 `.env.example` 和本地 `.env`。不要使用 `mise use -g` 修改其他项目的全局默认版本。临时命令通过 `mise exec -- <command>` 执行。
+mise 固定 Node.js 24、pnpm 12.10.1、Python 3.13、uv 0.12.3 和 Wrangler 4.151.2。`mise run setup` 会安装这些工具。使用 `mise exec -- <command>` 执行临时命令，不修改全局工具版本。根 `.env` 服务于 workspace 和旧示例；Identity 的服务端配置放在应用自己的环境文件或 Worker 环境中。任何密钥都不能使用 `NEXT_PUBLIC_*`。
+
+Identity 的日常操作统一使用 `mise identity <命令>`；运行 `mise identity help` 查看全部命令：
+
+| 命令                                                   | 用途                                             |
+| ------------------------------------------------------ | ------------------------------------------------ |
+| `mise identity dev`                                    | 启动 Next.js 开发服务，先迁移本地 D1             |
+| `mise identity build`                                  | 构建 Next.js，并生成 OpenNext/Workers 部署产物   |
+| `mise identity preview`                                | 迁移本地 D1、构建并在 Workers runtime 预览       |
+| `mise identity test` / `mise identity coverage`        | 测试与覆盖率检查                                 |
+| `mise identity verify`                                 | 依次检查类型、lint、覆盖率、JWT 运行时和部署打包 |
+| `mise identity deploy-dry-run`                         | 构建并检查打包，不发布远端资源                   |
+| `mise identity deploy`                                 | 检查配置、构建并发布 Worker                      |
+| `mise identity db-create` / `mise identity db-migrate` | 创建远端 D1 / 应用远端迁移                       |
+| `mise identity db-migrate-local`                       | 应用本地 D1 迁移                                 |
+| `mise identity login` / `mise identity status`         | Cloudflare 登录 / 登录状态                       |
+| `mise identity logs`                                   | 订阅远端 Worker 日志                             |
+| `mise identity wrangler <参数...>`                     | 在 Identity 目录使用 mise 管理的 Wrangler        |
+
+这些入口对应 `mise run identity:<命令>`。检查命令将执行哪些步骤，可用 `mise run --dry-run identity:deploy`；它与实际构建打包的 `mise identity deploy-dry-run` 不同。原有 `mise run dev-identity`、`identity-db-*` 入口作为别名保留。
+
+OpenNext 和本地验证需要导入 Wrangler 的 Node API，pywrangler 也会通过 npx 调用项目中的 Wrangler，因此 package 中仍保留必要依赖，统一精确固定为 mise 的相同版本；升级 Wrangler 时需同步修改工具配置、package 和锁文件。[mise npm 工具说明](https://mise.jdx.dev/dev-tools/backends/npm)
 
 ## 验证
 
 ```bash
 mise run verify
+mise identity coverage
 ```
 
-依次执行 TypeScript / mypy 类型检查、Oxlint / Ruff、格式检查、Vitest / pytest、两个 Python 包的 wheel/sdist 与 Web 构建，以及两个 Worker 的发布打包检查（dry-run）。可以单独运行 `mise run check-types`、`lint`、`test`、`format`、`build` 或 `deploy-dry-run`。
+`verify` 检查 uv 锁文件，执行类型检查、Oxlint/Ruff、格式检查、Vitest/pytest、各 package 构建，以及全部 Worker 的部署打包检查。Identity 的覆盖率检查范围为服务端和 HTTP API，四项阈值均为 90%。
 
-`deploy-dry-run` 不发布站点、不创建远端数据库，也不能证明云端配额、账号权限或远端数据库迁移已正确配置。
+截至 2026-10-23，最终域名方案已通过全仓 `mise run verify` 和 182 项测试；Identity 核心覆盖率为 statements 98.57%、branches 98.06%、functions 100%、lines 99.39%。旧 workers.dev 入口已完成真实 GitHub 登录、USD 1.00 Sandbox 付款开通、退出重登后持权及全额退款撤权；Workers 本地预览、本地 D1 smoke 和远端健康检查也已通过。
 
-启动 `mise run dev` 后，可在另一个终端运行 `mise run smoke`，验证两个 Web 入口、D1 健康与数据读写删除、Python Worker 及网关调用。该检查只访问本机，并在结束时删除它创建的测试记录。
+最终域名分工为 `login.loom-labs.ai` 登录页、`checkout.loom-labs.ai` 账户与购买、`auth.loom-labs.ai` Logto 托管认证。登录页发起的登录完成 checkout 回调后跳转固定的 `www.loom-labs.ai`；购买页发起的登录留在购买页。www 仅作为返回目的地，尚未集成会话。
 
-## Cloudflare 部署与存储
+Logto 开发/生产租户由用户预先创建，本次仅配置开发租户，生产租户未改动。新域已验证 GitHub 的两种固定返回、付款开通、退出重登持权及全额退款撤权。Google 已完成上游授权并到达显式关联页，依用户选择保持未关联，应用回调和 www 返回未验。未来可使用未占用邮箱的 Google 身份，或另行明确关联后补验；本次不继续关联。
 
-目标使用 Workers Free + Workers Static Assets + D1。代码不要求付费产品；免费配额取决于 Cloudflare 账号中的实际套餐，并非不限量使用。按 2026-10-21 查阅的官方文档，Workers Free 包含每日 100,000 次动态请求和每次请求 10 ms CPU 时间；D1 包含每日 500 万行读取、10 万行写入和总计 5 GB 存储。超出免费配额会限制请求或查询，不会由本项目自动升级套餐。
+`next build`、OpenNext build、Wrangler dry-run、本地预览、真实第三方联调与远端部署是不同的验证层级。打包或本地测试通过，不代表已完成远端迁移、登录、付款或免费套餐容量验证。
 
-官方依据：[Workers 定价](https://developers.cloudflare.com/workers/platform/pricing/)、[D1 定价](https://developers.cloudflare.com/d1/platform/pricing/)、[Python Workers FastAPI](https://developers.cloudflare.com/workers/languages/python/packages/fastapi/)。
+## Cloudflare 部署
 
-首次云端部署需要：
+Identity 使用 Workers + Static Assets + D1。页面与 API 由一个 Next.js/OpenNext Worker 提供；当前动态页面不需要 R2 ISR 缓存，也不依赖 Durable Objects、容器或独立 Node 服务器。应使用 Next.js 的 Node.js runtime 和 `nodejs_compat`，不设置 `output: "export"` 或 `runtime = "edge"`。
+
+先配置真实账号、数据库和密钥，再部署：
 
 ```bash
-mise run cloudflare-login
-mise run cloudflare-status
+mise identity login
+mise identity status
+mise identity db-create
+# 将输出的 database_id 填入 apps/identity/wrangler.jsonc
+mise identity db-migrate
+# 配置 APP_URL、Logto、Stripe Sandbox 和 Worker Secrets，见应用说明
+mise identity deploy
+```
+
+Identity 使用自己的 `apps/identity/migrations` 与 D1 数据库，不复用旧网关的数据库。全零 UUID 只供本地模拟；远端迁移和部署入口会拒绝该占位值。后续结构变更新增 migration，不改写已应用的迁移。
+
+目标以 Cloudflare 免费资源验证，但项目不会自动选择、升级或证明某个套餐的可用额度；Worker 包大小、CPU、请求和 D1 配额需以实际账户及部署结果核实。参考 [Cloudflare Next.js](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/)、[Workers 定价](https://developers.cloudflare.com/workers/platform/pricing/)和 [D1 定价](https://developers.cloudflare.com/d1/platform/pricing/)。
+
+既有示例的远端部署继续使用旧网关数据库与独立 Python Worker：
+
+```bash
 mise run cloudflare-db-create
+# 将旧网关的 database_id 填入 apps/worker/wrangler.jsonc
+mise run cloudflare-db-migrate
+mise exec -- pnpm deploy:examples
 ```
 
-将创建命令输出的 `database_id` 填入 `apps/worker/wrangler.jsonc`，替换全零 UUID。全零 UUID 仅供本地模拟使用；远端迁移和部署入口会拒绝该占位值。
+该入口按 Python Worker → Web 构建/网关 Worker 的顺序执行；Python Worker 通过 service binding 提供服务。旧网关 `/api/hotkeys` 与 `/api/normalize` 仅用于技术链路演示，没有 Identity 的用户隔离和付费校验。
+
+## Python workspace
+
+根 `pyproject.toml` 不声明应用 package。uv workspace 包含 `apps/python` 与 `packages/python/*`，共用根 `uv.lock` 和 `.venv`；应用通过 `workspace = true` 引用 `hotkey-tools-core`。成员自行声明运行依赖和构建后端，开发工具集中在根依赖组。
 
 ```bash
-mise run cloudflare-db-migrate
-mise run deploy
+mise run python-sync
+mise run python-lock
+mise exec -- uv tree --locked --depth 1
+mise exec -- uv run --locked --all-packages pytest
 ```
 
-部署顺序为 Python Worker → Web 构建与网关 Worker。Python 的 `workers_dev=false`，只通过网关 service binding 提供服务。Web 静态资源、示例 API 和 D1 位于同一个网关 Worker 下，不需要付费容器或独立服务器。
-
-D1 初始表结构在 `apps/worker/migrations/0001_init.sql`。增加或修改字段时新增 migration；不要直接修改已应用的 migration。重新执行本地 migration 使用 `mise run cloudflare-db-migrate-local`。
-
-## 示例接口
-
-| 网关接口                  | 功能                                          |
-| ------------------------- | --------------------------------------------- |
-| `GET /api/health`         | 检查 D1 绑定与初始表是否可查询；异常返回 503  |
-| `GET /api/hotkeys`        | 读取 D1 示例列表                              |
-| `POST /api/hotkeys`       | 创建示例记录，必填 `name`、`combination`      |
-| `DELETE /api/hotkeys/:id` | 删除示例记录                                  |
-| `POST /api/normalize`     | 通过 service binding 调用 Python `/normalize` |
-
-Python 自身提供 `GET /health` 和 `POST /normalize`。这些接口用于验证技术链路；D1 示例读写目前没有用户隔离和身份校验，业务权限需要在正式产品功能中实现。
+`uv run --package` 选择依赖环境，不改变工作目录。Wrangler 的 Python 命令须在应用目录执行，因此优先使用对应 mise 入口。Python Worker 的 `pylock.toml`、`.venv-workers` 服务于 Pyodide/WASM，不替代根开发锁；启动或部署前会同步发布依赖并打包共享库源码。参考 [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/)和 [Python Workers FastAPI](https://developers.cloudflare.com/workers/languages/python/packages/fastapi/)。

@@ -6,6 +6,15 @@ if [[ ! -f .env ]]; then
   cp .env.example .env
 fi
 
+if [[ ! -f apps/identity/.env.local ]]; then
+  cp apps/identity/.env.example apps/identity/.env.local
+fi
+
+if [[ ! -f apps/identity/.dev.vars ]]; then
+  cp apps/identity/.env.example apps/identity/.dev.vars
+fi
+
 pnpm install --frozen-lockfile
 uv sync --locked --all-packages --python "$(command -v python)"
 pnpm cloudflare:db:migrate:local
+pnpm identity:db:migrate:local

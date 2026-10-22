@@ -16,6 +16,6 @@
   },
   "devDependencies": {
     "@hotkey-tools/python-core": "workspace:*",
-    "wrangler": "^4.127.1"
+    "wrangler": "4.151.2"
   }
 }

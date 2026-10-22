@@ -1,0 +1,57 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hotkey-tools-identity",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-22",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "checkout.loom-labs.ai", "custom_domain": true },
+    { "pattern": "login.loom-labs.ai", "custom_domain": true },
+  ],
+  "vars": {
+    "APP_URL": "https://checkout.loom-labs.ai",
+    "LOGIN_URL": "https://login.loom-labs.ai",
+    "AUTH_SUCCESS_URL": "https://www.loom-labs.ai/",
+    "LOGTO_ENDPOINT": "https://auth.loom-labs.ai",
+    "LOGTO_USER_NAMESPACE": "https://kpy72v.logto.app",
+    "LOGTO_APP_ID": "7wqbzelu2ey5n5brfr73d",
+    "STRIPE_PRICE_ID": "price_1UTNA2K268Z7hNOawKnuuMQL",
+  },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hotkey-tools-identity",
+      "database_id": "a31cb3b2-dee4-4555-b7e4-b74304a28441",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "env": {
+    "preview": {
+      // Keep local request origins intact instead of rewriting them to a custom domain.
+      "routes": [],
+      "vars": {
+        "APP_URL": "http://localhost:3001",
+        "LOGIN_URL": "http://127.0.0.1:3001",
+        "AUTH_SUCCESS_URL": "http://localhost:3001/",
+        "LOGTO_ENDPOINT": "https://auth.loom-labs.ai",
+        "LOGTO_USER_NAMESPACE": "https://kpy72v.logto.app",
+        "LOGTO_APP_ID": "7wqbzelu2ey5n5brfr73d",
+        "STRIPE_PRICE_ID": "price_1UTNA2K268Z7hNOawKnuuMQL",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "hotkey-tools-identity",
+          "database_id": "a31cb3b2-dee4-4555-b7e4-b74304a28441",
+          "migrations_dir": "migrations",
+        },
+      ],
+    },
+  },
+  "observability": { "enabled": true },
+}
