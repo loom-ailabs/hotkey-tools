@@ -1,11 +1,23 @@
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import type { NextConfig } from "next";
-import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 
-export default function nextConfig(phase: string): NextConfig {
-  return {
-    output: "export",
-    distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next",
-    trailingSlash: true,
-    images: { unoptimized: true },
-  };
-}
+const require = createRequire(import.meta.url);
+const joseWebCrypto = join(dirname(require.resolve("jose/package.json")), "dist/browser/index.js");
+
+initOpenNextCloudflareForDev();
+
+const nextConfig: NextConfig = {
+  transpilePackages: ["@hotkey-tools/ui", "@hotkey-tools/identity-core"],
+  images: { unoptimized: true },
+  webpack(config) {
+    // Next's Node build otherwise selects jose's Node export before OpenNext can
+    // resolve its workerd condition. Keep the SDK's complete JWT verification
+    // using jose's official WebCrypto implementation in both development and Workers.
+    config.resolve.alias = { ...config.resolve.alias, jose$: joseWebCrypto };
+    return config;
+  },
+};
+
+export default nextConfig;

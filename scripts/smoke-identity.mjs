@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 const baseUrl = process.env.IDENTITY_SMOKE_URL ?? "http://localhost:3001";
 const page = await fetch(baseUrl);
 assert.equal(page.status, 200, "Next.js page should respond");
-assert.match(await page.text(), /Hotkey Tools/);
+assert.match(await page.text(), /Loom|Hotkey Tools/);
 
 const health = await fetch(new URL("/api/health", baseUrl));
 assert.equal(health.status, 200, "D1 must be migrated and available");

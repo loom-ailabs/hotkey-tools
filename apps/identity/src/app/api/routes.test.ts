@@ -15,10 +15,12 @@ const mocks = vi.hoisted(() => {
     getUser: vi.fn(async () => null as null | { id: string; name: string; email: string }),
     getAuthClient: vi.fn(async () => ({
       client,
-      config: { baseUrl: "https://app.example" },
-      successUrl: "https://app.example/",
+      config: { baseUrl: "https://login.loom-labs.ai", endpoint: "https://auth.loom-labs.ai" },
+      successUrl: "https://www.loom-labs.ai/",
     })),
-    getEnv: vi.fn(async () => ({ APP_URL: "https://app.example" }) as { APP_URL?: string }),
+    getEnv: vi.fn(
+      async () => ({ APP_URL: "https://checkout.loom-labs.ai" }) as { APP_URL?: string },
+    ),
     getDatabase: vi.fn(async () => ({ prepare: vi.fn(() => ({ first })) })),
     hasPremium: vi.fn(async () => false),
     createCheckout: vi.fn(async () => ({
@@ -57,7 +59,7 @@ import { GET as login } from "./auth/login/route";
 import { POST as logout } from "./auth/logout/route";
 import { GET as callback } from "./auth/callback/route";
 
-const appUrl = "https://app.example";
+const appUrl = "https://checkout.loom-labs.ai";
 const alice = { id: "alice", name: "Alice", email: "alice@example.com" };
 const requestId = "8ee21263-ad30-481b-bb9e-3f40e805c2e5";
 
@@ -89,8 +91,8 @@ beforeEach(() => {
   mocks.getEnv.mockResolvedValue({ APP_URL: appUrl });
   mocks.getAuthClient.mockResolvedValue({
     client: mocks.client,
-    config: { baseUrl: appUrl },
-    successUrl: `${appUrl}/`,
+    config: { baseUrl: "https://login.loom-labs.ai", endpoint: "https://auth.loom-labs.ai" },
+    successUrl: "https://www.loom-labs.ai/",
   });
   mocks.client.handleSignIn.mockResolvedValue({ url: "https://id.example/authorize" });
   mocks.client.handleSignOut.mockResolvedValue("https://id.example/logout");
@@ -289,25 +291,26 @@ describe("Stripe webhook and health routes", () => {
 });
 
 describe("Logto browser redirects", () => {
-  it("starts login at the provider using a fixed callback", async () => {
-    const response = await login(new Request(`${appUrl}/api/auth/login`));
+  it("routes a product login through the central portal without a product preauth cookie", async () => {
+    const response = await login(new Request(`${appUrl}/api/auth/login?destination=checkout`));
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe("https://id.example/authorize");
-    expect(mocks.client.handleSignIn).toHaveBeenCalledExactlyOnceWith({
-      redirectUri: `${appUrl}/api/auth/callback`,
-      postRedirectUri: `${appUrl}/`,
-    });
+    const target = new URL(response.headers.get("location")!);
+    expect(target.origin).toBe("https://login.loom-labs.ai");
+    expect(target.searchParams.get("returnTo")).toBe(`${appUrl}/`);
+    expect(mocks.client.handleSignIn).not.toHaveBeenCalled();
   });
 
-  it("validates the callback against the configured app origin", async () => {
+  it("validates the callback against the central origin", async () => {
     const response = await callback(
-      new Request(`${appUrl}/api/auth/callback?code=from-provider&state=signed-state`),
+      new Request(
+        "https://login.loom-labs.ai/api/auth/callback?code=from-provider&state=signed-state",
+      ),
     );
     expect(mocks.client.handleSignInCallback).toHaveBeenCalledExactlyOnceWith(
-      `${appUrl}/api/auth/callback?code=from-provider&state=signed-state`,
+      "https://login.loom-labs.ai/api/auth/callback?code=from-provider&state=signed-state",
     );
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe(`${appUrl}/`);
+    expect(response.headers.get("location")).toBe("https://www.loom-labs.ai/workspace");
   });
 
   it("rejects provider callback validation errors without redirecting", async () => {
@@ -315,7 +318,7 @@ describe("Logto browser redirects", () => {
       new ApiError(400, "invalid_origin", "回调无效。"),
     );
     await expectFailure(
-      await callback(new Request(`${appUrl}/api/auth/callback?code=bad`)),
+      await callback(new Request("https://login.loom-labs.ai/api/auth/callback?code=bad")),
       400,
       "invalid_origin",
     );

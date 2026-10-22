@@ -2,6 +2,8 @@
 @source "../../../../apps";
 @source "../../../../packages";
 
+@custom-variant dark (&:where(.dark, .dark *, .loom-dark, .loom-dark *));
+
 @theme inline {
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
@@ -25,10 +27,19 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-window: var(--window);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-control: var(--control);
+  --color-control-hover: var(--control-hover);
+  --color-link: var(--link);
+  --color-selection: var(--selection);
+  --color-selection-foreground: var(--selection-foreground);
+  --radius-sm: var(--corner-sm, calc(var(--radius) - 4px));
+  --radius-md: var(--corner-md, calc(var(--radius) - 2px));
+  --radius-lg: var(--corner-lg, var(--radius));
+  --radius-xl: var(--corner-xl, calc(var(--radius) + 4px));
 }
 :root {
   color-scheme: light;
@@ -52,6 +63,52 @@
   --border: oklch(0.9 0.012 250);
   --input: oklch(0.9 0.012 250);
   --ring: oklch(0.58 0.15 250);
+  --window: var(--muted);
+  --surface: var(--background);
+  --surface-raised: var(--card);
+  --surface-overlay: var(--card);
+  --control: var(--card);
+  --control-hover: var(--secondary);
+  --link: var(--primary);
+  --selection: var(--accent);
+  --selection-foreground: var(--accent-foreground);
+}
+
+/* 来自 Loom Desktop 正式深色主题；交互蓝沿用其链接与焦点颜色。 */
+.loom-dark {
+  color-scheme: dark;
+  --background: #181818;
+  --foreground: #dfdfdf;
+  --card: #232323;
+  --card-foreground: #dfdfdf;
+  --primary: #8bbfff;
+  --primary-foreground: #181818;
+  --secondary: #2d2d2d;
+  --secondary-foreground: #dfdfdf;
+  --muted: #282828;
+  --muted-foreground: #b8b8b8;
+  --accent: #19354e;
+  --accent-foreground: #a2ceff;
+  --destructive: #ff8b84;
+  --success: #78d6a3;
+  --warning: #f3c46d;
+  --warning-foreground: #f3c46d;
+  --border: #353535;
+  --input: #353535;
+  --ring: #339cff;
+  --window: #25292c;
+  --surface: #181818;
+  --surface-raised: #232323;
+  --surface-overlay: #363636;
+  --control: #2d2d2d;
+  --control-hover: #343434;
+  --link: #8bbfff;
+  --selection: #19354e;
+  --selection-foreground: #a2ceff;
+  --corner-sm: 0.25rem;
+  --corner-md: 0.5rem;
+  --corner-lg: 0.625rem;
+  --corner-xl: 0.75rem;
 }
 @layer base {
   * {

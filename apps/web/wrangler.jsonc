@@ -1,0 +1,60 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vite-react-template",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-22",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "www.loom-labs.ai",
+      "custom_domain": true,
+    },
+  ],
+  "vars": {
+    "APP_URL": "https://www.loom-labs.ai",
+    "LOGIN_URL": "https://login.loom-labs.ai",
+    "AUTH_SUCCESS_URL": "https://www.loom-labs.ai/",
+    "LOGTO_ENDPOINT": "https://auth.loom-labs.ai",
+    "LOGTO_USER_NAMESPACE": "https://kpy72v.logto.app",
+    "LOGTO_COOKIE_DOMAIN": ".loom-labs.ai",
+    "LOGTO_APP_ID": "7wqbzelu2ey5n5brfr73d",
+  },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hotkey-tools-identity",
+      "database_id": "a31cb3b2-dee4-4555-b7e4-b74304a28441",
+      "migrations_dir": "../identity/migrations",
+    },
+  ],
+  "env": {
+    "preview": {
+      "routes": [],
+      "vars": {
+        "LOGTO_COOKIE_DOMAIN": "",
+        "APP_URL": "http://localhost:3000",
+        "LOGIN_URL": "http://localhost:3001",
+        "AUTH_SUCCESS_URL": "http://localhost:3000/",
+        "LOGTO_ENDPOINT": "https://auth.loom-labs.ai",
+        "LOGTO_USER_NAMESPACE": "https://kpy72v.logto.app",
+        "LOGTO_APP_ID": "7wqbzelu2ey5n5brfr73d",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "hotkey-tools-identity",
+          "database_id": "a31cb3b2-dee4-4555-b7e4-b74304a28441",
+          "migrations_dir": "../identity/migrations",
+        },
+      ],
+    },
+  },
+  "observability": {
+    "enabled": true,
+  },
+}

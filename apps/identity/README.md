@@ -32,27 +32,28 @@ Wrangler CLI 由 mise 安装并固定版本；OpenNext 的 Node API 与运行时
 
 环境文件：
 
-- `apps/identity/.env.local`：Next.js 本地开发配置。
-- `apps/identity/.dev.vars`：Workers 本地预览配置。
+- `apps/identity/.env.local`：仅公开的 Next.js 本地配置，密钥项保持为空。
+- `apps/identity/.dev.vars`：Next.js/OpenNext 本地绑定与真实本地密钥。
 - 两个文件均由 `setup` 在缺失时从 `.env.example` 创建，不会覆盖已有内容，且已被 Git 忽略。
 - 服务端优先读取 OpenNext/Workers bindings 中的非空值，再使用进程环境。避免两个本地文件中保留不一致的非空配置。
 
 ## 配置项
 
-| 名称                    | 用途                                                                                                           | 配置位置                           |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `APP_URL`               | 本应用的准确访问 origin，如本地 `http://localhost:3001` 或已部署的 HTTPS origin；不要带路径、query 或 fragment | 本地环境文件；远端 Worker Variable |
-| `LOGIN_URL`             | 可选的独立登录页 origin，仅该精确主机展示 Google/GitHub 按钮；未设置时保留原购买页面                           | 本地环境文件；远端 Worker Variable |
-| `AUTH_SUCCESS_URL`      | 网站登录完成后的固定首页；正式地址使用 HTTPS，本地 loopback 可用 HTTP；未配置时使用 `APP_URL` 根地址           | 本地环境文件；远端 Worker Variable |
-| `LOGTO_ENDPOINT`        | Logto 租户访问地址，不带额外 `/oidc` 路径                                                                      | 本地环境文件；远端 Worker Variable |
-| `LOGTO_USER_NAMESPACE`  | 本地用户表使用的固定租户标识；未设置时沿用 `LOGTO_ENDPOINT`，切换该租户域名前必须显式固定原值                  | 本地环境文件；远端 Worker Variable |
-| `LOGTO_APP_ID`          | Logto Traditional web 应用 ID                                                                                  | 本地环境文件；远端 Worker Variable |
-| `LOGTO_APP_SECRET`      | 同一应用的客户端密钥                                                                                           | 本地环境文件；远端 Worker Secret   |
-| `LOGTO_COOKIE_SECRET`   | 至少 32 字符的随机会话加密密钥；重启和重新部署时保持稳定                                                       | 本地环境文件；远端 Worker Secret   |
-| `STRIPE_SECRET_KEY`     | 与商品、Price、Webhook 同一 Sandbox 的 `sk_test_` 密钥                                                         | 本地环境文件；远端 Worker Secret   |
-| `STRIPE_WEBHOOK_SECRET` | 当前回调目标对应的 `whsec_` 签名密钥；CLI 转发与远端 endpoint 的密钥不同                                       | 本地环境文件；远端 Worker Secret   |
-| `STRIPE_PRICE_ID`       | Sandbox 中启用的、金额大于零的一次性固定 Price                                                                 | 本地环境文件；远端 Worker Variable |
-| `DB`                    | D1 binding，不是连接字符串                                                                                     | `wrangler.jsonc` 的 `d1_databases` |
+| 名称                    | 用途                                                                                                                                 | 配置位置                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
+| `APP_URL`               | 本应用的准确访问 origin，如本地 `http://localhost:3001` 或已部署的 HTTPS origin；不要带路径、query 或 fragment                       | 本地环境文件；远端 Worker Variable |
+| `LOGIN_URL`             | 统一认证 origin，作为 SDK baseUrl 和唯一 OIDC 回调主机；该精确主机展示登录页                                                         | 本地环境文件；远端 Worker Variable |
+| `AUTH_SUCCESS_URL`      | 网站默认返回地址的可信根 origin（默认使用其 /workspace）；正式地址使用 HTTPS，本地 loopback 可用 HTTP；未配置时使用 `APP_URL` 根地址 | 本地环境文件；远端 Worker Variable |
+| `LOGTO_ENDPOINT`        | Logto 租户访问地址，不带额外 `/oidc` 路径                                                                                            | 本地环境文件；远端 Worker Variable |
+| `LOGTO_USER_NAMESPACE`  | 本地用户表使用的固定租户标识；未设置时沿用 `LOGTO_ENDPOINT`，切换该租户域名前必须显式固定原值                                        | 本地环境文件；远端 Worker Variable |
+| `LOGTO_APP_ID`          | Logto Traditional web 应用 ID                                                                                                        | 本地环境文件；远端 Worker Variable |
+| `LOGTO_APP_SECRET`      | 同一应用的客户端密钥                                                                                                                 | 仅 `.dev.vars`；远端 Worker Secret |
+| `LOGTO_COOKIE_DOMAIN`   | 生产固定 `.loom-labs.ai`；本地 localhost 留空                                                                                        | 本地公开配置；远端 Worker Variable |
+| `LOGTO_COOKIE_SECRET`   | 至少 32 字符的随机会话加密密钥；重启和重新部署时保持稳定                                                                             | 仅 `.dev.vars`；远端 Worker Secret |
+| `STRIPE_SECRET_KEY`     | 与商品、Price、Webhook 同一 Sandbox 的 `sk_test_` 密钥                                                                               | 仅 `.dev.vars`；远端 Worker Secret |
+| `STRIPE_WEBHOOK_SECRET` | 当前回调目标对应的 `whsec_` 签名密钥；CLI 转发与远端 endpoint 的密钥不同                                                             | 仅 `.dev.vars`；远端 Worker Secret |
+| `STRIPE_PRICE_ID`       | Sandbox 中启用的、金额大于零的一次性固定 Price                                                                                       | 本地环境文件；远端 Worker Variable |
+| `DB`                    | D1 binding，不是连接字符串                                                                                                           | `wrangler.jsonc` 的 `d1_databases` |
 
 可用 `openssl rand -base64 32` 生成 Cookie 密钥，再保存至本地文件或 Secret。不要提交实际凭据、将它们放入 `NEXT_PUBLIC_*`，或在命令行参数、页面、截图和日志中展示密钥。根 `.env` 不替代应用配置。
 
@@ -62,12 +63,12 @@ Wrangler CLI 由 mise 安装并固定版本；OpenNext 的 Node API 与运行时
 
 在 Logto 租户创建 **Traditional web** 类型的自有应用，将应用 ID、应用密钥和租户 endpoint 填入上述配置。本应用的两项登记地址为：
 
-| Logto 应用字段             | 地址                           |
-| -------------------------- | ------------------------------ |
-| Redirect URI               | `${APP_URL}/api/auth/callback` |
-| Post sign-out redirect URI | `${APP_URL}/`                  |
+| Logto 应用字段             | 地址                             |
+| -------------------------- | -------------------------------- |
+| Redirect URI               | `${LOGIN_URL}/api/auth/callback` |
+| Post sign-out redirect URI | `${APP_URL}/`                    |
 
-本地和远端 origin 分别登记。不要填写通配地址或从用户请求的 Host 推导回调。登录的 `destination` 仅允许 `website`（默认，返回 `AUTH_SUCCESS_URL`）和 `checkout`（返回 `APP_URL` 根地址）；购买页面明确使用后者。目的地通过官方 SDK 的 `postRedirectUri` 保存到加密登录会话，回调完成验证后再次检查两个固定地址，不接受任意 `redirect`、`returnTo` 或重复的 `destination`。可选 `provider` 仅允许 `google` 或 `github`，映射至 SDK 的固定 `{ method: 'social', target: 'google' | 'github' }`；社交登录的 target 是 IdP 名称，不是 connector ID。未知、空或重复的 provider 被拒绝，客户端不能指定 target。参考 [Logto Next.js App Router 接入](https://docs.logto.io/quick-starts/next-app-router)和[直接登录](https://docs.logto.io/end-user-flows/authentication-parameters/direct-sign-in)。
+本地和远端回调分别登记。SDK 的 baseUrl 统一使用 `LOGIN_URL`，生产回调为 `https://login.loom-labs.ai/api/auth/callback`，不从 Host 推导。产品 `/api/auth/login` 303 到中央登录页；`returnTo` 仅允许 HTTPS 规范 `*.loom-labs.ai`，排除 login/auth、userinfo、非标准端口及 hash，保留路径和原 query。已有有效共享会话直接回产品；匿名用户使用固定 Google/GitHub provider。目标保存在官方 SDK 加密登录会话中，回调验证 state、PKCE、issuer、audience 和签名后再验证目标。旧 `destination=website|checkout` 仅兼容固定目标，未知或重复参数拒绝。客户端不能指定任意 IdP target。
 
 ### 自定义域名与原用户归属
 
@@ -81,9 +82,9 @@ LOGTO_ENDPOINT=https://auth.loom-labs.ai
 LOGTO_USER_NAMESPACE=https://kpy72v.logto.app
 ```
 
-`login.loom-labs.ai` 与 `checkout.loom-labs.ai` 绑定本 Next.js Worker，前者展示独立的 Google/GitHub 登录页，后者展示账户与购买页。只有请求 Host 与已校验 `LOGIN_URL` 主机精确匹配时才展示登录页；未配置 `LOGIN_URL` 时，本地与购买页行为不变。`auth.loom-labs.ai` 属于 Logto 托管认证流程，`www.loom-labs.ai` 保留原站。登录页按钮链接到 `${APP_URL}/api/auth/login?provider=google|github&destination=website`；购买页面发起的登录返回购买页面。Logto 的应用回调登记为 `${APP_URL}/api/auth/callback`，Google/GitHub 的 connector 回调另按 Logto 控制台给出的 auth 域地址登记。
+`login.loom-labs.ai` 与 `checkout.loom-labs.ai` 绑定本 Worker：前者展示统一登录页、发起与接收唯一 OIDC 回调，后者展示账户和购买页。`auth.loom-labs.ai` 是 Logto 托管认证，`www.loom-labs.ai` 由 apps/web 提供产品页面。所有产品进入 login，并携带经校验的完整 returnTo 路径及 query；有效共享会话直接回产品。Google/GitHub 的上游 connector 回调仍登记 Logto auth 域，不能与本应用 login 回调混淆。
 
-SDK 使用 host-only Cookie，发起登录与接收回调必须位于同一 checkout 主机。旧 workers.dev 登录入口会在调用 SDK 前 303 到配置的 canonical 登录入口，并丢弃无关参数；旧主机上的回调被拒绝，应重新登录。当前 Stripe endpoint 已改为 checkout 的 Webhook URL 并回读确认；原 workers.dev 路由仍直接验签处理，不受登录跳转影响。返回 www 只完成页面跳转；现有静态站不会自动读取 checkout 会话，网站账号展示或付费功能接入需要单独完成。
+会话通过官方 `@logto/node/edge` 与公开 CookieStorage 接入 Next cookies；Next SDK 当前没有 Domain/cookieName 配置，因此该适配只负责 Cookie 运输，协议验证仍由官方 SDK 完成。生产新 Cookie `__Secure-loom_session_<appId>` 设置 `Domain=.loom-labs.ai`、Path=/、HttpOnly、Secure、SameSite=Lax，WWW/checkout/login 共用原 identity key、app ID、endpoint 与 namespace。旧 host-only `logto_<appId>` 不再接受，避免同名遮蔽，用户首次重新登录。退出精确删除共享 Domain/Path，并清当前 host 旧 Cookie。父域 Cookie 会到达所有子域，应视为同一信任域。Stripe Webhook 继续原文验签，不受登录跳转影响；支付后固定返回 `https://www.loom-labs.ai/workspace`。
 
 同一个 Logto 租户切换访问域名时，必须保持 `LOGTO_APP_ID`、Cookie 密钥及 `LOGTO_USER_NAMESPACE` 稳定。现有用户的 `users.issuer` 已保存原 endpoint，因此本租户固定为 `https://kpy72v.logto.app`，无需改写数据库或重新关联订单。该字段现在表示固定的本地身份命名空间；实际 OIDC issuer 仍由 SDK 从当前 endpoint 的 discovery 获取并校验。命名空间只能用于同一个已确认租户，不能用于自动合并其他租户；不按邮箱匹配用户。未固定命名空间而直接换域可能触发用户主键冲突，应用会拒绝请求。
 
@@ -114,7 +115,7 @@ Google 官方基本资料授权成功，并返回 auth 域 connector 回调，�
 
 官方 SDK 在回调阶段验证登录流程，随后使用加密的 HttpOnly、SameSite=Lax Cookie 保存会话；正式 HTTPS origin 开启 Secure。没有额外的 `sessions` 表。后续 API 会在服务端检查身份声明的 `exp`，过期、缺失或异常时视为未登录；本期不做静默续期，需重新登录。
 
-应用使用稳定的 `(租户命名空间, subject)` 记录用户，前者保存在 `users.issuer`，不以邮箱关联购买。ID Token 不作为通用业务 API 的 bearer token。退出登录仅接受同源 POST，清除应用会话并通过 303 转到 Logto 登出流程。尚未接入控制台禁用用户或跨应用登出的实时回通道，不能声称所有应用 Cookie 会立即被远程吊销。
+应用使用稳定的 `(租户命名空间, subject)` 记录用户，前者保存在 `users.issuer`，不以邮箱关联购买。ID Token 不作为通用业务 API 的 bearer token。退出登录仅接受同源 POST，清除应用会话并通过 303 转到 Logto 登出流程。共享 Cookie 删除后各产品后续请求失去会话；尚未接入控制台禁用用户的远程回通道，不能声称已复制的 Cookie 会立即被服务器吊销。
 
 ## Stripe Sandbox 单次购买
 
@@ -165,9 +166,11 @@ mise identity preview
 
 `next dev` 主要运行在 Node.js；`preview` 使用 `wrangler.jsonc` 的独立 `env.preview`，清空远端 Custom Domain routes，先执行该环境的本地 D1 迁移，再构建并以 `--env preview --local` 启动 Workers runtime，不对远端数据库应用迁移。
 
-预览账户与购买页为 `http://localhost:3001`，专用登录页为 `http://127.0.0.1:3001`。启动命令显式固定 `APP_URL`、`LOGIN_URL`、`AUTH_SUCCESS_URL` 三个本地地址，避免空白环境模板或生产 routes 改写本地请求的来源。预览使用端口 3001，应先停止同端口开发服务；另开终端运行 `mise identity smoke`，检查页面、D1、私有 API 与来源限制。真实本地 OAuth 仍需有效测试凭据与已登记的 localhost 回调。
+中央登录预览为 `http://localhost:3001`，WWW 为 `http://localhost:3000`。两应用本地使用相同 Cookie key 和 localhost（Domain 留空），统一 LOGIN_URL=localhost:3001、AUTH_SUCCESS_URL=localhost:3000。预览清空生产 routes，不放宽正式准确 Origin 检查；真实本地 OAuth 需登记中央 localhost:3001 回调。
 
-截至 2026-10-23，最终域名方案已通过全仓 `mise run verify` 和 182 项测试；核心服务端/API 覆盖率为 statements 98.57%、branches 98.06%、functions 100%、lines 99.39%。Workers 本地预览、本地 D1 smoke、远端 D1 健康检查和 9 项匿名边界检查已通过。
+2026-10-23 的父域共享会话版本已上线：登录与购买 Worker 为 `a4224f5a-c2f1-427f-87c5-2fb94f03cce2`，WWW 为 `c7fbf7c8-c45a-45e5-b6d2-7ae7c15a0b85`。全仓验证、本地 Workerd 和 60 项线上匿名检查通过；真实 GitHub 三域共享登录、有效会话返回原产品、共享退出、USD 1.00 Sandbox 付款后主站运行、退出重登持权，以及全额退款后原会话拒绝访问均已完成。最终有效权益为 0；旧有两项 pending 购买意图未改动。浏览器和订单证据分别为 `shared-domain-browser-e2e.json` 与 `shared-domain-billing.json`，完整步骤与对象清单见[飞书操作记录](https://bytedance.larkoffice.com/docx/O5IUdAY2bon0L1x72gucn73NnOh)。
+
+以下是此前独立会话方案的历史记录，不作为本轮父域共享会话的验收依据：当时域名方案已通过全仓 `mise run verify` 和 182 项测试；核心服务端/API 覆盖率为 statements 98.57%、branches 98.06%、functions 100%、lines 99.39%。Workers 本地预览、本地 D1 smoke、远端 D1 健康检查和 9 项匿名边界检查已通过。
 
 旧 workers.dev 入口已完成 GitHub 登录、Sandbox 付款、重登持权及全额退款撤权，证据位于 `.codex-artifacts/identity/browser-e2e.json` 和 `cloud-e2e-billing.json`。
 
@@ -206,7 +209,7 @@ mise identity wrangler secret put STRIPE_SECRET_KEY
 mise identity wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
 
-`APP_URL` 固定为接收会话与回调的 checkout origin；在 Logto 应用中登记该 origin 的登录回调与退出地址。login 只展示选择身份源的入口，auth 的 connector 回调另登记到 Google/GitHub；www 仅为固定返回目的地。Stripe endpoint 已指向 checkout 域；该 URL 的付款与全额退款实际投递、D1 状态及高级接口结果均已验证。之后运行：
+本应用 APP_URL 为 checkout，WWW 的 APP_URL 为 www，仅用于各自页面/API 与准确 Origin 检查。两应用 SDK baseUrl 统一 LOGIN_URL=login，OIDC 回调仅在 login；共享 Cookie Domain=.loom-labs.ai、app ID、原 identity key、endpoint 和 namespace 全部一致。Stripe endpoint 继续指向 checkout，付款和退款协议不变。之后运行：
 
 ```bash
 mise identity deploy
@@ -221,8 +224,8 @@ mise identity deploy
 | 路由                        | 行为                                                     |
 | --------------------------- | -------------------------------------------------------- |
 | `GET /api/health`           | 检查 D1 binding 和迁移后的表                             |
-| `GET /api/auth/login`       | 接受 website/checkout 目的地枚举，canonical 主机开始登录 |
-| `GET /api/auth/callback`    | SDK 校验回调后仅允许返回两个固定首页                     |
+| `GET /api/auth/login`       | 产品跳中央页；中央允许固定 provider 和受信 returnTo      |
+| `GET /api/auth/callback`    | SDK 校验后仅返回受信产品路径与 query，拒绝 hash          |
 | `POST /api/auth/logout`     | 同源登出，清除会话后 303 跳转                            |
 | `GET /api/me`               | 当前用户与 `{ premium }` 权益；匿名用户返回 `user: null` |
 | `POST /api/checkout`        | 同源、已登录；创建或恢复该用户的购买尝试                 |
@@ -233,3 +236,7 @@ mise identity deploy
 自有 JSON API 成功返回 `{ code: 0, msg: "success", data }`，失败返回 `{ code, msg, error: { type } }` 并保留相应 HTTP status；业务码集中在 `src/server/http-codes.ts`。私有数据响应使用 `private, no-store`。登录跳转按 OIDC 流程返回，不套 JSON 格式。
 
 前端由 `_pages/identity` 组合 `features/manage-access`，共享请求解析位于 `shared/api`，通用组件和主题位于根 `packages/ui`；浏览器不导入 `src/server`。
+
+### 本地密钥与构建产物
+
+真实 Logto / Stripe 密钥只存于已忽略的 `.dev.vars`，生产使用 Cloudflare Secret。`.env.local` 仅填写公开配置，其密钥项保持为空：OpenNext 1.20 会把 `.env*` 的值编入 Worker；`.dev.vars` 不参与这份编译，Next 开发通过 Cloudflare binding 获取其中的本地密钥。不要将真实凭据复制回 `.env.local`。构建前的 `check-worker-env.mjs` 会检查仓库根和应用的各模式 dotenv 文件，发现非空密钥配置即拒绝构建；只打印文件及变量名。

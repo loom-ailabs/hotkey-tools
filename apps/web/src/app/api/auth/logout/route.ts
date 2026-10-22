@@ -1,0 +1,5 @@
+import { createAuthRoutes } from "@hotkey-tools/identity-core/auth-routes";
+import { getAuthClient, getUser } from "@/server/auth";
+import { getEnv } from "@/server/env";
+export const dynamic = "force-dynamic";
+export const POST = createAuthRoutes({ getAuthClient, getEnv, getUser }).logout;

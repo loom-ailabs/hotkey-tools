@@ -5,8 +5,12 @@ import { getDatabase } from "./db";
 import { getEnv } from "./env";
 import { ApiError } from "./http";
 
-export const PRODUCT_KEY = "hotkey-tools";
-export const FEATURE_KEY = "premium-demo";
+import {
+  PRODUCT_KEY,
+  FEATURE_KEY,
+  hasPremiumInDatabase,
+} from "@hotkey-tools/identity-core/entitlements";
+export { PRODUCT_KEY, FEATURE_KEY } from "@hotkey-tools/identity-core/entitlements";
 const APPLICATION_KEY = "hotkey-tools-identity";
 const MAX_WEBHOOK_BYTES = 1_048_576;
 const REQUEST_ID_PATTERN =
@@ -93,18 +97,6 @@ function invalidPayment(message = "Stripe 支付信息与本地订单不一致�
 export async function hasPremium(userId: string): Promise<boolean> {
   const db = await getDatabase();
   return hasPremiumInDatabase(db, userId);
-}
-
-async function hasPremiumInDatabase(db: D1Database, userId: string): Promise<boolean> {
-  const row = await db
-    .prepare(
-      `SELECT order_id FROM entitlements
-       WHERE user_id = ? AND product_key = ? AND feature_key = ? AND revoked_at IS NULL
-       LIMIT 1`,
-    )
-    .bind(userId, PRODUCT_KEY, FEATURE_KEY)
-    .first<{ order_id: string }>();
-  return row !== null;
 }
 
 export async function getOrderForUser(id: string, userId: string) {

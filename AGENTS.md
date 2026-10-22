@@ -10,7 +10,8 @@
 - 所有新增 Web 应用统一使用 **Next.js 全栈应用**：页面与业务 API 位于同一应用、同一服务和同一域名。每个产品在 `apps/<产品名>` 下拥有独立应用与 package。
 - 使用 App Router 承载页面，使用 `src/app/api/**/route.ts` 承载 HTTP API；应用业务逻辑放在本应用的 `src/server`。不要为同一个 Web 产品再新增独立 Hono、Express 网关或另一套 BFF。
 - Cloudflare 通过 OpenNext 将该 Next.js 应用部署为一个 Worker，同时提供页面、静态资源和 API。需要登录或动态 API 的应用不得设置 `output: "export"`。
-- `apps/web` 与 `apps/worker` 保留为既有静态 Web/网关示例；它们不作为新认证、支付和产品 API 的落点。默认产品开发入口使用 `apps/identity`。
+- `apps/web` 是 `www.loom-labs.ai` 的 Loom AI 产品首页与工作区，使用 Next.js/OpenNext 提供页面与受保护 API。`apps/identity` 提供统一登录入口与购买页；登录会话 Cookie 设置在 `.loom-labs.ai`，子域产品使用相同的会话格式、加密密钥、Logto 应用与 D1 权益。共享服务端实现提取到 package，禁止应用互相导入。
+- `apps/worker` 保留为旧网关示例，不承载正式首页或新的认证、支付逻辑。产品演示使用固定示例内容，界面明确标注演示，不宣称调用真实模型或执行任务。
 - `apps/python` 与 `packages/python/*` 保持既有 uv workspace 边界。只有明确需要 Python 的能力才由独立 Python Worker 提供；用户身份、订单和权益判断仍由 Next.js 服务负责。
 - 应用不能导入另一应用的实现。业务类型与接口定义先留在实际所有者中，多个活跃消费者确实需要共享时，再提取职责明确的 package。
 - 仓库根目录只管理 workspace、工具链与任务，不承载应用代码，不声明根 Python package。
@@ -19,7 +20,7 @@
 
 - Web：Next.js 16、React 19、TypeScript strict、Tailwind CSS 4。
 - UI：本仓库 `packages/ui` 中的 shadcn/ui 风格基础组件、统一主题变量和 `cn()`；图标使用 `lucide-react`。
-- 持久化：Cloudflare D1；认证使用已发布的 Logto 官方 Next.js SDK；支付使用 Stripe 官方 SDK 与托管 Checkout。
+- 持久化：Cloudflare D1；认证使用已发布的 Logto 官方 SDK，通过共享的 Next.js Cookie 适配设置父域会话；支付使用 Stripe 官方 SDK 与托管 Checkout。
 - 测试：Vitest；React 交互测试按需使用 Testing Library 与 happy-dom；数据库状态和事务测试使用实际 SQL 执行环境。
 - 格式与静态检查使用 **Oxlint、Oxfmt**。不要添加 ESLint 或 Prettier 配置与依赖。
 - mise 管理项目固定的 Node.js、pnpm、Python、uv 和 Wrangler CLI 版本。Identity 使用 `mise identity <命令>`（对应 `mise run identity:<命令>`）作为统一入口，临时命令使用 `mise exec -- ...`，不修改全局工具版本。
@@ -47,6 +48,7 @@ apps/identity/src/
 - 前端依赖方向为 `App → Pages → Widgets → Features → Entities → Shared`。下层不得依赖上层，同层不同 slice 不直接导入内部实现。
 - `src/app` 是 Next.js 适配层，不是 FSD App 层。为避免框架保留目录冲突，FSD Pages 使用 `_pages`，FSD App 使用 `_app`。
 - 保留标准的 `page.tsx`、`layout.tsx`、`route.ts` 命名；确需请求拦截时使用 Next.js 16 的 `src/proxy.ts`。不得通过修改 `pageExtensions` 绕开架构边界。
+- 页面导航使用 Next.js 路径路由，不使用 Hash 路由或 `#workspace` 等片段地址作为页面入口。登录与支付返回地址同样使用真实路径；新增页面必须能够直接访问和刷新。
 - 页面只负责组合。支付流程、轮询、请求重试及其他业务状态放在相应 feature 的 model/hooks/API 中。
 - slice 对外通过 `index.ts` 暴露公共接口；其他 slice 不越过公共入口访问内部文件。
 - `shared` 只包含不带产品业务规则的通用能力。订单定价、身份归属、权益规则不能藏在通用 `utils`、`helpers` 或 `manager` 中。
@@ -63,6 +65,8 @@ apps/identity/src/
 - 点击控件使用语义化 `button`、`a[href]` 等，非禁用状态显示 pointer；同时提供键盘焦点、禁用、加载、空态和错误反馈。
 - 页面需要适配移动端与桌面端。保留可读的排版层级、合理对比度、表单标签与必要的 `aria` 属性。
 - 用户界面使用自然中文，SDK、协议、代码标识符和必要产品名保持原文。工程配置和实现细节放在开发文档，不挤入普通产品流程。
+- 公开页面同时面向用户、搜索引擎和 AI 检索：正文由服务端输出，提供准确的标题、描述、规范网址、分享元数据、站点地图和可抓取的内部链接。结构化数据必须与可见内容一致，不虚构评价、客户、真实模型能力或将 Sandbox 价格当作正式报价。
+- 公开产品说明可提供 `llms.txt` 等便于 AI 读取的文本入口，并与页面内容同步；不承诺这些文件能提高搜索排名。登录、支付、私人接口和用户数据禁止索引，实际访问控制始终由服务端认证与鉴权负责，不能由 robots.txt 代替。
 
 ## Next.js 服务端与 HTTP API
 
@@ -95,7 +99,9 @@ apps/identity/src/
 ## 登录、支付与鉴权规则
 
 - 首版：Logto Cloud Free + Google/GitHub 登录，Stripe Sandbox 单次购买，D1 管理产品权益。
-- 使用已发布的官方 Next.js SDK，回调验证 state、PKCE、issuer、audience 和签名；不能把 JWT decode 当作认证校验。
+- 使用已发布的 Logto 官方 SDK，回调验证 state、PKCE、issuer、audience 和签名；不能把 JWT decode 当作认证校验，不修改 SDK 源码以实现 Cookie 设置。
+- `login.loom-labs.ai` 统一发起登录并处理回调。有效会话直接返回原产品地址；无效或过期会话完成登录后再返回。返回地址必须校验 HTTPS、精确域名后缀、端口与用户信息，保留合法路径与查询；拒绝外域、含片段的地址及会引发登录循环的目标。
+- 正式环境共享会话 Cookie 使用 `Domain=.loom-labs.ai; Path=/; Secure; HttpOnly; SameSite=Lax`，写入与退出删除必须匹配 Domain/Path。父域下的所有子域均属于会话信任范围；新增产品不得托管不受信任的子域内容或采用另一套会话密钥。本地不把正式父域 Cookie 设置到 localhost。
 - 后续请求必须验证会话在服务端的有效期，不能只依赖浏览器 Cookie 的 `Max-Age`。过期会话要求重新登录，除非已明确实现并验证安全续期。
 - 用户归属来自受校验会话中的稳定身份。保留 `(issuer, subject)` 映射，不以邮箱匹配订单或自动合并账号。
 - 不把 ID Token 当作通用业务 API access token；不依赖 Logto 付费 RBAC/API resources 才能实现首版付费鉴权。

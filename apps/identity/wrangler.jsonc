@@ -15,6 +15,7 @@
     "AUTH_SUCCESS_URL": "https://www.loom-labs.ai/",
     "LOGTO_ENDPOINT": "https://auth.loom-labs.ai",
     "LOGTO_USER_NAMESPACE": "https://kpy72v.logto.app",
+    "LOGTO_COOKIE_DOMAIN": ".loom-labs.ai",
     "LOGTO_APP_ID": "7wqbzelu2ey5n5brfr73d",
     "STRIPE_PRICE_ID": "price_1UTNA2K268Z7hNOawKnuuMQL",
   },
@@ -35,9 +36,10 @@
       // Keep local request origins intact instead of rewriting them to a custom domain.
       "routes": [],
       "vars": {
+        "LOGTO_COOKIE_DOMAIN": "",
         "APP_URL": "http://localhost:3001",
-        "LOGIN_URL": "http://127.0.0.1:3001",
-        "AUTH_SUCCESS_URL": "http://localhost:3001/",
+        "LOGIN_URL": "http://localhost:3001",
+        "AUTH_SUCCESS_URL": "http://localhost:3000/",
         "LOGTO_ENDPOINT": "https://auth.loom-labs.ai",
         "LOGTO_USER_NAMESPACE": "https://kpy72v.logto.app",
         "LOGTO_APP_ID": "7wqbzelu2ey5n5brfr73d",

@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/server/env", () => ({ getEnv: mocks.getEnv }));
 vi.mock("@/server/db", () => ({ getDatabase: mocks.getDatabase }));
 vi.mock("@/server/billing", () => ({ hasPremium: mocks.hasPremium }));
-vi.mock("@logto/next/server-actions", () => ({
+vi.mock("@hotkey-tools/identity-core/session", () => ({
   default: class {
     handleSignIn = mocks.signIn;
     handleSignInCallback = mocks.callback;
@@ -25,20 +25,20 @@ vi.mock("@logto/next/server-actions", () => ({
 import { getLoginPageConfig, getLogtoConfig, getUser } from "./auth";
 import { SQLiteD1, seedOrder } from "@/test/billing-fixtures";
 import { GET as login } from "@/app/api/auth/login/route";
-import { GET as callback } from "@/app/api/auth/callback/route";
-import { POST as logout } from "@/app/api/auth/logout/route";
 import { GET as me } from "@/app/api/me/route";
 
 const configuredEnv = {
-  APP_URL: "https://account.example.com",
-  AUTH_SUCCESS_URL: "https://www.example.com/",
+  APP_URL: "https://checkout.loom-labs.ai",
+  LOGIN_URL: "https://login.loom-labs.ai",
+  LOGTO_COOKIE_DOMAIN: ".loom-labs.ai",
+  AUTH_SUCCESS_URL: "https://www.loom-labs.ai/",
   LOGTO_ENDPOINT: "https://identity.example.com/",
   LOGTO_APP_ID: "app-id",
   LOGTO_APP_SECRET: "test-app-secret",
   LOGTO_COOKIE_SECRET: "a-test-cookie-secret-with-at-least-32-characters",
 };
 
-const loginRequest = (query = "", origin = configuredEnv.APP_URL) =>
+const loginRequest = (query = "", origin = configuredEnv.LOGIN_URL) =>
   new Request(`${origin}/api/auth/login${query}`);
 
 beforeEach(() => {
@@ -72,6 +72,7 @@ describe("Logto configuration and identity", () => {
     expect(await getLoginPageConfig()).toEqual({
       appUrl: "https://checkout.example.com",
       loginUrl: "https://login.example.com",
+      websiteAppUrl: "https://checkout.example.com",
     });
     mocks.getEnv.mockResolvedValue({
       APP_URL: "http://localhost:3001",
@@ -80,6 +81,7 @@ describe("Logto configuration and identity", () => {
     expect(await getLoginPageConfig()).toEqual({
       appUrl: "http://localhost:3001",
       loginUrl: "http://localhost:3002",
+      websiteAppUrl: "http://localhost:3001",
     });
   });
 
@@ -112,12 +114,12 @@ describe("Logto configuration and identity", () => {
       { LOGTO_COOKIE_SECRET: "too-short" },
       { APP_URL: "http://account.example.com" },
       { LOGTO_ENDPOINT: "http://identity.example.com" },
-      { APP_URL: "https://account.example.com/other" },
+      { APP_URL: "https://checkout.loom-labs.ai/other" },
       { AUTH_SUCCESS_URL: "http://www.example.com/" },
-      { AUTH_SUCCESS_URL: "https://www.example.com/path" },
+      { AUTH_SUCCESS_URL: "https://www.loom-labs.ai/path" },
       { AUTH_SUCCESS_URL: "https://user:secret@www.example.com/" },
-      { AUTH_SUCCESS_URL: "https://www.example.com/?next=other" },
-      { AUTH_SUCCESS_URL: "https://www.example.com/#fragment" },
+      { AUTH_SUCCESS_URL: "https://www.loom-labs.ai/?next=other" },
+      { AUTH_SUCCESS_URL: "https://www.loom-labs.ai/#fragment" },
       { LOGTO_USER_NAMESPACE: "http://tenant.example.com" },
       { LOGTO_USER_NAMESPACE: "https://user:secret@tenant.example.com" },
       { LOGTO_USER_NAMESPACE: "https://tenant.example.com?user=other" },
@@ -132,7 +134,12 @@ describe("Logto configuration and identity", () => {
       endpoint: "https://identity.example.com",
       cookieSecure: true,
     });
-    mocks.getEnv.mockResolvedValue({ ...configuredEnv, APP_URL: "http://localhost:3001" });
+    mocks.getEnv.mockResolvedValue({
+      ...configuredEnv,
+      APP_URL: "http://localhost:3001",
+      LOGIN_URL: "http://localhost:3001",
+      LOGTO_COOKIE_DOMAIN: undefined,
+    });
     expect(await getLogtoConfig()).toMatchObject({ cookieSecure: false });
   });
 
@@ -250,180 +257,6 @@ describe("Logto configuration and identity", () => {
     } finally {
       database.raw.close();
     }
-  });
-});
-
-describe("authentication routes", () => {
-  it("starts login with the configured callback only", async () => {
-    const response = await login(loginRequest());
-    expect(response.status).toBe(303);
-    expect(mocks.signIn).toHaveBeenCalledWith({
-      redirectUri: "https://account.example.com/api/auth/callback",
-      postRedirectUri: "https://www.example.com/",
-    });
-    expect(response.headers.get("cache-control")).toBe("private, no-store");
-  });
-
-  it("persists only the fixed checkout destination in the SDK sign-in session", async () => {
-    await login(loginRequest("?destination=checkout&redirect=https://evil.example.com"));
-    expect(mocks.signIn).toHaveBeenCalledWith({
-      redirectUri: "https://account.example.com/api/auth/callback",
-      postRedirectUri: "https://account.example.com/",
-    });
-  });
-
-  it.each(["google", "github"])(
-    "selects the fixed %s social target and ignores browser-supplied connector identifiers",
-    async (provider) => {
-      const response = await login(
-        loginRequest(`?provider=${provider}&target=attacker-connector&method=sso`),
-      );
-      expect(response.status).toBe(303);
-      expect(mocks.signIn).toHaveBeenCalledExactlyOnceWith({
-        redirectUri: "https://account.example.com/api/auth/callback",
-        postRedirectUri: "https://www.example.com/",
-        directSignIn: { method: "social", target: provider },
-      });
-    },
-  );
-
-  it.each([
-    "?provider=",
-    "?provider=Google",
-    "?provider=attacker-connector",
-    "?provider=google&provider=github",
-  ])("rejects an invalid or repeated provider: %s", async (query) => {
-    const response = await login(loginRequest(query));
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ error: { type: "invalid_login_provider" } });
-    expect(mocks.signIn).not.toHaveBeenCalled();
-  });
-
-  it("preserves only the validated provider while canonicalizing an old-host login", async () => {
-    const response = await login(
-      loginRequest(
-        "?provider=github&target=attacker&returnTo=https://evil.example",
-        "https://old.example",
-      ),
-    );
-    expect(response.headers.get("location")).toBe(
-      "https://account.example.com/api/auth/login?destination=website&provider=github",
-    );
-    expect(response.headers.has("set-cookie")).toBe(false);
-    expect(mocks.signIn).not.toHaveBeenCalled();
-  });
-
-  it("redirects an old host to the canonical login before creating a sign-in cookie", async () => {
-    const response = await login(
-      loginRequest(
-        "?destination=checkout&returnTo=https://evil.example.com",
-        "https://old.example",
-      ),
-    );
-    expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe(
-      "https://account.example.com/api/auth/login?destination=checkout",
-    );
-    expect(response.headers.has("set-cookie")).toBe(false);
-    expect(mocks.signIn).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    "?destination=evil",
-    "?destination=https://evil.example",
-    "?destination=website&destination=checkout",
-  ])("rejects an invalid or ambiguous destination %s", async (query) => {
-    expect((await login(loginRequest(query))).status).toBe(400);
-    expect(mocks.signIn).not.toHaveBeenCalled();
-  });
-
-  it("delegates state and PKCE verification to the SDK and uses its protected website target", async () => {
-    mocks.callback.mockResolvedValue("https://www.example.com/");
-    const response = await callback(
-      new Request(
-        "https://account.example.com/api/auth/callback?code=code-value&state=state-value&returnTo=https://evil.example",
-      ),
-    );
-    expect(mocks.callback).toHaveBeenCalledWith(
-      "https://account.example.com/api/auth/callback?code=code-value&state=state-value&returnTo=https://evil.example",
-    );
-    expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe("https://www.example.com/");
-  });
-
-  it("allows the protected checkout target and defaults old sessions to the configured website", async () => {
-    mocks.callback.mockResolvedValue("https://account.example.com/");
-    expect(
-      (await callback(new Request("https://account.example.com/api/auth/callback"))).headers.get(
-        "location",
-      ),
-    ).toBe("https://account.example.com/");
-    mocks.callback.mockResolvedValue(undefined);
-    expect(
-      (await callback(new Request("https://account.example.com/api/auth/callback"))).headers.get(
-        "location",
-      ),
-    ).toBe("https://www.example.com/");
-  });
-
-  it("rejects a callback on another host before exchanging its authorization code", async () => {
-    const response = await callback(
-      new Request("https://old.example/api/auth/callback?code=value"),
-    );
-    expect(response.status).toBe(400);
-    expect(mocks.callback).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    "https://evil.example/",
-    "https://www.example.com/path",
-    "https://www.example.com/?next=evil",
-  ])("rejects an SDK return target outside the two fixed roots: %s", async (target) => {
-    mocks.callback.mockResolvedValue(target);
-    const response = await callback(new Request("https://account.example.com/api/auth/callback"));
-    expect(response.status).toBe(400);
-    expect(response.headers.has("location")).toBe(false);
-  });
-
-  it("defaults the website target to the canonical root when not configured", async () => {
-    mocks.getEnv.mockResolvedValue({ ...configuredEnv, AUTH_SUCCESS_URL: undefined });
-    await login(loginRequest("?destination=website"));
-    expect(mocks.signIn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        postRedirectUri: "https://account.example.com/",
-      }),
-    );
-  });
-
-  it("never completes a callback after SDK verification fails", async () => {
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    mocks.callback.mockRejectedValue(new Error("invalid-state secret-do-not-expose"));
-    const response = await callback(new Request("https://account.example.com/api/auth/callback"));
-    expect(response.status).toBe(503);
-    expect(response.headers.get("location")).toBeNull();
-    expect(await response.text()).not.toContain("secret-do-not-expose");
-    log.mockRestore();
-  });
-
-  it("rejects cross-site logout before touching the session and changes POST redirects to GET", async () => {
-    const blocked = await logout(
-      new Request("https://account.example.com/api/auth/logout", {
-        method: "POST",
-        headers: { origin: "https://evil.example.com" },
-      }),
-    );
-    expect(blocked.status).toBe(403);
-    expect(mocks.signOut).not.toHaveBeenCalled();
-
-    const response = await logout(
-      new Request("https://account.example.com/api/auth/logout", {
-        method: "POST",
-        headers: { origin: "https://account.example.com" },
-      }),
-    );
-    expect(response.status).toBe(303);
-    expect(mocks.signOut).toHaveBeenCalledWith("https://account.example.com/");
-    expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 });
 

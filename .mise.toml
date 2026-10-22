@@ -222,3 +222,34 @@ run = "wrangler whoami"
 description = "订阅 Identity Worker 的实时日志"
 dir = "{{config_root}}/apps/identity"
 run = "wrangler tail"
+
+[tasks."web:preview"]
+description = "构建并在 Workers runtime 预览 WWW 应用，localhost:3000"
+run = "pnpm --filter @hotkey-tools/web preview"
+
+[tasks."web:build"]
+description = "构建 WWW Next.js/OpenNext Worker"
+run = "pnpm --filter @hotkey-tools/web cf:build"
+
+[tasks."web:coverage"]
+description = "检查共享身份服务与 WWW API 覆盖率"
+run = [
+  "pnpm --filter @hotkey-tools/identity-core test:coverage",
+  "pnpm --filter @hotkey-tools/web test:coverage",
+]
+
+[tasks."web:deploy-dry-run"]
+description = "构建并检查 WWW Worker 打包，不发布"
+run = "pnpm --filter @hotkey-tools/web run deploy:dry-run"
+
+[tasks."web:deploy"]
+description = "构建并部署 WWW Worker"
+run = "pnpm --filter @hotkey-tools/web run deploy"
+
+[tasks."web:smoke"]
+description = "检查 WWW 页面、D1、会话拒绝、统一登录入口与父域共享 Cookie"
+run = "node scripts/smoke-web.mjs"
+
+[tasks."web:check-shared-session"]
+description = "用本地 Workerd HTTP 与标准 CookieJar 验证父域会话，不访问远端数据库"
+run = "python scripts/check-shared-session.py"

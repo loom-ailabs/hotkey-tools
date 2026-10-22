@@ -1,0 +1,39 @@
+{
+  "name": "@hotkey-tools/identity-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./auth": "./src/auth.ts",
+    "./auth-routes": "./src/auth-routes.ts",
+    "./http": "./src/http.ts",
+    "./http-codes": "./src/http-codes.ts",
+    "./contract": "./src/contract.ts",
+    "./entitlements": "./src/entitlements.ts",
+    "./session": "./src/session.ts",
+    "./return-target": "./src/return-target.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "oxlint src",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@logto/node": "4.0.1",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261019.1",
+    "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "next": "16.4.2",
+    "oxlint": "^1.72.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  },
+  "peerDependencies": {
+    "next": "16.4.2"
+  }
+}

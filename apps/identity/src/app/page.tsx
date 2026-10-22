@@ -1,27 +1,45 @@
 import { headers } from "next/headers";
+import { redirect, notFound } from "next/navigation";
+import { resolveLoginReturnTarget } from "@hotkey-tools/identity-core/auth-routes";
 import { IdentityPage } from "@/_pages/identity";
 import { SignInPage } from "@/_pages/sign-in";
-import { getLoginPageConfig } from "@/server/auth";
+import { getAuthClient, getLoginPageConfig, getUser } from "@/server/auth";
+import { getEnv } from "@/server/env";
+import { ApiError } from "@/server/http";
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const config = await getLoginPageConfig();
   const requestHeaders = await headers();
   if (config && requestHeaders.get("host") === new URL(config.loginUrl).host) {
-    const googleSignInUrl = new URL("/api/auth/login", config.appUrl);
-    googleSignInUrl.searchParams.set("provider", "google");
-    googleSignInUrl.searchParams.set("destination", "website");
-
-    const githubSignInUrl = new URL("/api/auth/login", config.appUrl);
-    githubSignInUrl.searchParams.set("provider", "github");
-    githubSignInUrl.searchParams.set("destination", "website");
-
+    const input = await searchParams;
+    const query = new URLSearchParams();
+    for (const name of ["returnTo", "destination"]) {
+      const value = input[name];
+      for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value])
+        query.append(name, item);
+    }
+    const auth = await getAuthClient();
+    let target: string;
+    try {
+      target = resolveLoginReturnTarget(query, auth, await getEnv());
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 400) notFound();
+      throw error;
+    }
+    if (await getUser()) redirect(target);
+    const providerUrl = (provider: string) => {
+      const url = new URL("/api/auth/login", config.loginUrl);
+      url.searchParams.set("provider", provider);
+      url.searchParams.set("returnTo", target);
+      return url.toString();
+    };
     return (
-      <SignInPage
-        googleSignInUrl={googleSignInUrl.toString()}
-        githubSignInUrl={githubSignInUrl.toString()}
-      />
+      <SignInPage googleSignInUrl={providerUrl("google")} githubSignInUrl={providerUrl("github")} />
     );
   }
-
   return <IdentityPage />;
 }

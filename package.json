@@ -12,7 +12,7 @@
     "build": "turbo run build",
     "check-types": "turbo run check-types",
     "lint": "turbo run lint",
-    "test": "turbo run test",
+    "test": "node --test scripts/check-worker-env.test.mjs && turbo run test",
     "format": "oxfmt --write . && pnpm --filter '@hotkey-tools/python*' format",
     "format:check": "oxfmt --check .",
     "python:check-types": "pnpm --filter '@hotkey-tools/python*' check-types",
@@ -28,7 +28,7 @@
     "identity:db:migrate": "pnpm --filter @hotkey-tools/identity db:migrate",
     "deploy": "pnpm --filter @hotkey-tools/identity run deploy",
     "deploy:examples": "node scripts/check-cloudflare.mjs && pnpm --filter @hotkey-tools/python run deploy && pnpm --filter @hotkey-tools/worker run deploy",
-    "deploy:dry-run": "pnpm --filter @hotkey-tools/web build && pnpm --filter @hotkey-tools/python run deploy:dry-run && pnpm --filter @hotkey-tools/worker run deploy:dry-run && pnpm --filter @hotkey-tools/identity run deploy:dry-run"
+    "deploy:dry-run": "pnpm --filter @hotkey-tools/web run deploy:dry-run && pnpm --filter @hotkey-tools/python run deploy:dry-run && pnpm --filter @hotkey-tools/worker run deploy:dry-run && pnpm --filter @hotkey-tools/identity run deploy:dry-run"
   },
   "devDependencies": {
     "oxfmt": "^0.57.0",

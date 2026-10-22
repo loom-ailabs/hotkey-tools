@@ -1,6 +1,6 @@
 # hotkey-tools
 
-默认应用是 `apps/identity`：使用 Next.js 在同一服务提供账户页面和业务 API，接入 Logto 登录、Stripe Sandbox 单次购买和 Cloudflare D1 权益记录，通过 OpenNext 部署为一个 Cloudflare Worker。
+仓库包含 Loom AI 产品首页与工作区（`apps/web`）以及登录与购买应用（`apps/identity`）。两者分别使用 Next.js/OpenNext 提供页面与同源 API，共享 `.loom-labs.ai` 下的登录会话、Logto 身份与 Cloudflare D1 权益。默认 `mise run dev` 仍启动账户与购买应用；主站使用 `mise run dev-web`。
 
 从初始化、身份源配置到支付联调的步骤见 [Identity 应用说明](apps/identity/README.md)。仓库工作约定见 [AGENTS.md](AGENTS.md)。
 
@@ -10,12 +10,12 @@
 | ----------------------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
 | `apps/identity`               | Next.js 16、React 19、Tailwind CSS 4、Logto、Stripe、OpenNext | 默认产品：账户、购买、订单与付费鉴权；页面和 API 同源     |
 | `packages/ui`                 | shadcn/ui 风格组件、Tailwind 主题变量、`cn()`                 | 共享 Button、Card、Badge、Alert 等基础组件                |
-| `apps/web`                    | Next.js 16、React 19、TypeScript                              | 既有静态导出 Web 示例                                     |
+| `apps/web`                    | Next.js 16、React 19、TypeScript                              | Loom AI 主站、工作区与受保护演示 API                      |
 | `apps/worker`                 | TypeScript、Hono、Wrangler、D1                                | 既有静态资源托管、示例 API 与 Python service binding 网关 |
 | `apps/python`                 | Python 3.13、FastAPI、Pydantic                                | 快捷键规范化示例，可运行于 CPython 或 Python Worker       |
 | `packages/python/hotkey-core` | Python、uv workspace                                          | Python 共享业务库                                         |
 
-新产品使用 `apps/<产品名>` 下的独立 Next.js 全栈应用。`apps/web` 与 `apps/worker` 保留作示例，不承载 Identity 的登录和支付逻辑。Python 仅在实际需要时作为独立能力服务使用。
+新产品使用 `apps/<产品名>` 下的独立 Next.js 全栈应用。共享认证、HTTP 与权益查询位于 `packages/identity-core`；Stripe 逻辑只在 `apps/identity`。旧 `apps/worker` 使用自己的静态占位页与示例 API。Python 仅在实际需要时作为独立能力服务使用。
 
 ## 初始化与日常开发
 
@@ -37,7 +37,7 @@ mise run dev
 | `mise run dev` / `mise run dev-identity` | 启动默认账户与购买应用，端口 3001              |
 | `mise run smoke`                         | 对默认应用做页面、D1、私有 API 与跨站拒绝检查  |
 | `mise run dev-examples`                  | 启动既有静态 Web、网关和 Python Worker 示例    |
-| `mise run dev-web`                       | 既有静态 Web 热更新，端口 3000                 |
+| `mise run dev-web`                       | Loom AI 主站热更新，端口 3000                  |
 | `mise run dev-worker`                    | 构建静态 Web、迁移示例 D1、启动网关，端口 8787 |
 | `mise run dev-python`                    | Python Worker，端口 8788                       |
 | `mise run dev-python-local`              | CPython + Uvicorn，端口 8000                   |
@@ -77,7 +77,7 @@ mise identity coverage
 
 截至 2026-10-23，最终域名方案已通过全仓 `mise run verify` 和 182 项测试；Identity 核心覆盖率为 statements 98.57%、branches 98.06%、functions 100%、lines 99.39%。旧 workers.dev 入口已完成真实 GitHub 登录、USD 1.00 Sandbox 付款开通、退出重登后持权及全额退款撤权；Workers 本地预览、本地 D1 smoke 和远端健康检查也已通过。
 
-最终域名分工为 `login.loom-labs.ai` 登录页、`checkout.loom-labs.ai` 账户与购买、`auth.loom-labs.ai` Logto 托管认证。登录页发起的登录完成 checkout 回调后跳转固定的 `www.loom-labs.ai`；购买页发起的登录留在购买页。www 仅作为返回目的地，尚未集成会话。
+最终域名分工为 `login.loom-labs.ai` 统一登录与回调、`checkout.loom-labs.ai` 账户与购买、`auth.loom-labs.ai` Logto 托管认证。产品携带 `returnTo` 跳转登录页；会话有效时直接返回原产品，否则完成登录后返回。返回地址只接受受信任的 Loom 产品地址并保留路径与查询，拒绝含片段的地址。www 与 checkout 使用同一加密会话 Cookie（`Domain=.loom-labs.ai`），不再分别进行 OIDC 登录；两者从 D1 查询同一用户的当前权益。
 
 Logto 开发/生产租户由用户预先创建，本次仅配置开发租户，生产租户未改动。新域已验证 GitHub 的两种固定返回、付款开通、退出重登持权及全额退款撤权。Google 已完成上游授权并到达显式关联页，依用户选择保持未关联，应用回调和 www 返回未验。未来可使用未占用邮箱的 Google 身份，或另行明确关联后补验；本次不继续关联。
 
@@ -113,6 +113,26 @@ mise exec -- pnpm deploy:examples
 ```
 
 该入口按 Python Worker → Web 构建/网关 Worker 的顺序执行；Python Worker 通过 service binding 提供服务。旧网关 `/api/hotkeys` 与 `/api/normalize` 仅用于技术链路演示，没有 Identity 的用户隔离和付费校验。
+
+## Loom AI 主站
+
+[主站说明](apps/web/README.md)覆盖本地配置、共享会话和部署；[设计依据](docs/loom-product-design.md)记录 loom-box 愿景、原版 Logo、Linear 风格参考及演示能力边界。
+
+[SEO 与 AI 检索说明](docs/seo-geo.md)记录公开页面的元数据、结构化数据、站点地图和 AI 文本入口，以及私人流程的索引限制与验证方式。
+
+页面使用 Next.js 路径路由：`/` 产品首页、`/vision` 愿景、`/workspace` 工作区、`/pricing` 体验方案。导航与登录、支付返回均不使用 Hash 地址，每个页面都可直接打开和刷新。
+
+```bash
+mise run dev-web
+mise run web:preview
+mise run web:coverage
+mise run web:deploy-dry-run
+mise run web:deploy
+```
+
+主站复用现有 `vite-react-template` Worker 与 www 自定义域；源码来自 `apps/web`，不再提供原 Vite 占位页。正式环境由 login 写入父域会话，所有 Loom 子域都属于同一会话信任范围；退出会删除该共享 Cookie。本地使用明确配置的 localhost 地址，不设置正式父域；Cookie 不按端口隔离，需使用相同会话配置，或分别进行预览验证。
+
+首页只模拟 Loom AI 的固定工作计划，不调用真实模型或外部工具。用户登录主站后，到 checkout 完成 USD 1.00 Sandbox 单次测试付款，再返回工作区刷新权益并运行 Pro 演示。每次受保护操作均重新查询服务端权益；全额退款后拒绝继续访问。当前只支持测试付款。
 
 ## Python workspace
 
