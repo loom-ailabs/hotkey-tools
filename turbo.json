@@ -7,7 +7,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "out/**", "dist/**", "!.next/cache/**"]
+      "outputs": [".next/**", ".open-next/**", "out/**", "dist/**", "!.next/cache/**"]
     },
     "@hotkey-tools/python#build": {
       "outputs": ["dist/**"]

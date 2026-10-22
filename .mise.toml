@@ -6,6 +6,7 @@ node = "24"
 pnpm = "12.10.1"
 python = "3.13"
 uv = "0.12.3"
+"npm:wrangler" = "4.151.2"
 
 [env]
 _.file = ".env"
@@ -23,13 +24,23 @@ run = [
   "pnpm --version",
   "python --version",
   "uv --version",
+  "wrangler --version",
   "if [ -f .env ]; then echo '.env: present'; else echo '.env: missing'; fi",
   "node scripts/check-cloudflare.mjs --status",
 ]
 
 [tasks.dev]
-description = "启动 Web、网关和 Python Worker 开发服务"
+description = "启动 Next.js 账户与购买应用，页面与 API 使用同一服务"
 run = "pnpm dev"
+
+[tasks."identity:dev"]
+alias = "dev-identity"
+description = "启动 Next.js 账户与购买应用，http://localhost:3001"
+run = "pnpm dev:identity"
+
+[tasks.dev-examples]
+description = "启动既有静态 Web、网关和 Python Worker 示例"
+run = "pnpm dev:examples"
 
 [tasks.dev-web]
 description = "启动 Next.js Web"
@@ -72,7 +83,11 @@ description = "运行全部应用测试"
 run = "pnpm test"
 
 [tasks.smoke]
-description = "检查 mise run dev 的实际 HTTP 与 D1/Python 链路"
+description = "检查 Next.js 应用的页面、D1 健康与配置失败行为"
+run = "node scripts/smoke-identity.mjs"
+
+[tasks.smoke-examples]
+description = "检查既有静态 Web、D1 与 Python 示例链路"
 run = "node scripts/smoke.mjs"
 
 [tasks.format]
@@ -93,18 +108,18 @@ run = [
 
 [tasks.cloudflare-login]
 description = "登录 Cloudflare 账户"
-run = "pnpm --filter @hotkey-tools/worker exec wrangler login"
+run = "wrangler login"
 
 [tasks.cloudflare-status]
 description = "读取 Cloudflare 登录状态"
-run = "pnpm --filter @hotkey-tools/worker exec wrangler whoami"
+run = "wrangler whoami"
 
 [tasks.cloudflare-db-migrate-local]
 description = "初始化本地 D1 数据库结构"
 run = "pnpm cloudflare:db:migrate:local"
 
 [tasks.deploy-dry-run]
-description = "检查两个 Worker 的发布打包，不创建远端资源"
+description = "检查全部应用的 Cloudflare 发布打包，不创建远端资源"
 run = "pnpm run deploy:dry-run"
 
 [tasks.cloudflare-db-create]
@@ -116,5 +131,94 @@ description = "将 D1 migrations 应用到远端数据库"
 run = "pnpm cloudflare:db:migrate"
 
 [tasks.deploy]
-description = "构建 Web 并部署 Cloudflare Worker、静态资源和 D1 API"
-run = "node scripts/check-cloudflare.mjs && pnpm run deploy"
+description = "将 Next.js 账户与购买应用部署为一个 Cloudflare Worker"
+run = "pnpm run deploy"
+
+[tasks."identity:db-create"]
+alias = "identity-db-create"
+description = "创建账户与购买应用的远端 D1 数据库"
+run = "pnpm identity:db:create"
+
+[tasks."identity:db-migrate-local"]
+alias = "identity-db-migrate-local"
+description = "应用账户与购买应用的本地 D1 migrations"
+run = "pnpm identity:db:migrate:local"
+
+[tasks."identity:db-migrate"]
+alias = "identity-db-migrate"
+description = "应用账户与购买应用的远端 D1 migrations"
+run = "pnpm identity:db:migrate"
+
+[tasks.identity]
+description = "Identity 命令入口；mise identity help 查看子命令"
+raw_args = true
+run = "node scripts/identity.mjs"
+
+[tasks."identity:build"]
+description = "构建 Next.js 并生成 Cloudflare Workers 部署产物"
+run = "pnpm --filter @hotkey-tools/identity cf:build"
+
+[tasks."identity:preview"]
+description = "迁移本地 D1、构建并在 Workers runtime 预览，端口 3001"
+run = "pnpm --filter @hotkey-tools/identity preview"
+
+[tasks."identity:deploy"]
+description = "检查配置、构建并部署 Identity Worker"
+run = "pnpm --filter @hotkey-tools/identity run deploy"
+
+[tasks."identity:deploy-dry-run"]
+description = "构建并检查 Workers 打包，不发布远端资源"
+run = "pnpm --filter @hotkey-tools/identity run deploy:dry-run"
+
+[tasks."identity:check-types"]
+description = "检查 Identity TypeScript 类型"
+run = "pnpm --filter @hotkey-tools/identity check-types"
+
+[tasks."identity:lint"]
+description = "检查 Identity 代码规范"
+run = "pnpm --filter @hotkey-tools/identity lint"
+
+[tasks."identity:test"]
+description = "运行 Identity 测试"
+run = "pnpm --filter @hotkey-tools/identity test"
+
+[tasks."identity:coverage"]
+description = "运行 Identity 测试与覆盖率检查"
+run = "pnpm --filter @hotkey-tools/identity test:coverage"
+
+[tasks."identity:check-crypto"]
+description = "在 Workers runtime 验证 JWT 签名及拒绝路径"
+run = "pnpm --filter @hotkey-tools/identity check:crypto"
+
+[tasks."identity:smoke"]
+description = "检查已启动的 Identity 页、D1 与 HTTP API"
+run = "node scripts/smoke-identity.mjs"
+
+[tasks."identity:verify"]
+description = "依次检查 Identity 类型、lint、覆盖率、运行时与部署打包"
+run = [
+  "\"{{mise_bin}}\" run identity:check-types",
+  "\"{{mise_bin}}\" run identity:lint",
+  "\"{{mise_bin}}\" run identity:coverage",
+  "\"{{mise_bin}}\" run identity:check-crypto",
+  "\"{{mise_bin}}\" run identity:deploy-dry-run",
+]
+
+[tasks."identity:wrangler"]
+description = "在 Identity 应用目录运行 mise 管理的 Wrangler；支持透传参数"
+raw_args = true
+dir = "{{config_root}}/apps/identity"
+run = '"{{mise_bin}}" exec -- wrangler'
+
+[tasks."identity:login"]
+description = "登录 Cloudflare 账户"
+run = "wrangler login"
+
+[tasks."identity:status"]
+description = "读取 Cloudflare 登录状态"
+run = "wrangler whoami"
+
+[tasks."identity:logs"]
+description = "订阅 Identity Worker 的实时日志"
+dir = "{{config_root}}/apps/identity"
+run = "wrangler tail"
