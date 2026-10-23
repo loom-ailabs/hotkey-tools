@@ -1,0 +1,13 @@
+import type { Metadata } from "next";
+import { getLocale } from "@hotkey-tools/i18n/server";
+import { HomePage } from "@/_pages/home";
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: (await getLocale()) === "en" ? "Profile · Loom AI" : "个人信息 · Loom AI",
+    robots: { index: false, follow: false, noarchive: true },
+    alternates: { canonical: null, languages: {} },
+  };
+}
+export default function Page() {
+  return <HomePage view="account" />;
+}

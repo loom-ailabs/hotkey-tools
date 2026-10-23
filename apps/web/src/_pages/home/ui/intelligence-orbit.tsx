@@ -1,11 +1,13 @@
+import { useTranslations } from "@hotkey-tools/i18n";
 import Image from "next/image";
 import { Braces, Globe2, Monitor } from "lucide-react";
 
 export function IntelligenceOrbit() {
+  const t = useTranslations("Web");
   return (
     <div
       className="relative mx-auto flex aspect-square w-full max-w-md items-center justify-center"
-      aria-label="Loom 多端协作愿景示意图"
+      aria-label={t("orbitLabel")}
     >
       <svg
         className="absolute inset-0 size-full text-link"
@@ -62,7 +64,7 @@ export function IntelligenceOrbit() {
       <div className="z-10 rounded-2xl border border-link/30 bg-surface p-4 shadow-2xl shadow-primary/10">
         <Image
           src="/loom.png"
-          alt="Loom AI 环织精灵"
+          alt={t("mascotAlt")}
           width={64}
           height={64}
           className="size-16 rounded-xl opacity-90"
@@ -71,15 +73,15 @@ export function IntelligenceOrbit() {
       </div>
       <div className="absolute top-16 left-0 flex items-center gap-2 rounded-lg border bg-surface px-3 py-2 text-xs text-muted-foreground">
         <Monitor className="size-4 text-link" />
-        桌面
+        {t("desktop")}
       </div>
       <div className="absolute top-16 right-0 flex items-center gap-2 rounded-lg border bg-surface px-3 py-2 text-xs text-muted-foreground">
         <Globe2 className="size-4 text-link" />
-        浏览器
+        {t("browser")}
       </div>
       <div className="absolute right-0 bottom-20 flex items-center gap-2 rounded-lg border bg-surface px-3 py-2 text-xs text-muted-foreground">
         <Braces className="size-4 text-link" />
-        编辑器
+        {t("editor")}
       </div>
       <span className="absolute bottom-4 font-mono text-xs tracking-widest text-muted-foreground">
         ONE CONNECTED EXPERIENCE

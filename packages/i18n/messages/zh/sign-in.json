@@ -1,0 +1,49 @@
+{
+  "login": {
+    "homeLabel": "Loom AI 首页",
+    "eyebrow": "连接你的下一次创造",
+    "title": "欢迎来到 Loom",
+    "description": "让灵感与工具在这里相遇。登录账号，继续你的下一步。",
+    "google": "使用 Google 继续",
+    "github": "使用 GitHub 继续",
+    "firstTime": "首次使用？登录后将为你创建 Loom 账号。",
+    "security": "在官方页面完成授权，无需向 Loom 提供密码。",
+    "back": "返回首页",
+    "settings": "偏好设置",
+    "theme": "外观",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统",
+    "language": "语言"
+  },
+  "carousel": {
+    "label": "探索 Loom",
+    "role": "轮播",
+    "slideRole": "幻灯片",
+    "position": "第 {index} 项，共 {total} 项",
+    "pause": "暂停自动轮播",
+    "play": "开始自动轮播",
+    "previous": "上一项",
+    "next": "下一项",
+    "choose": "选择要查看的内容",
+    "preview": "产品愿景 · 视觉示意",
+    "benefitAccount": "统一账号",
+    "benefitSecurity": "安全登录",
+    "benefitControl": "由你掌控",
+    "connect": {
+      "eyebrow": "Connecting Intelligence",
+      "title": "让智能，彼此连接。",
+      "description": "Loom 的愿景，是连接灵感、工具与工作方式，让每一次创造都有更自然的起点。"
+    },
+    "continuity": {
+      "eyebrow": "Crafting Tomorrow",
+      "title": "你的工作，保持连续。",
+      "description": "从桌面到浏览器，再到编辑器。不同的入口，连接同一段创造过程。"
+    },
+    "access": {
+      "eyebrow": "One Loom Account",
+      "title": "每一步，都由你掌控。",
+      "description": "一个账号，连接 Loom 的不同产品。安全登录，清晰管理你的访问权限。"
+    }
+  }
+}

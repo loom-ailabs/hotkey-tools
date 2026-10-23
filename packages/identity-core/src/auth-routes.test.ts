@@ -67,6 +67,7 @@ it.each(["google", "github"])(
     expect(signIn).toHaveBeenCalledWith({
       redirectUri: `${origin}/api/auth/callback`,
       postRedirectUri: product,
+      extraParams: { ui_locales: "zh-CN" },
       directSignIn: { method: "social", target: provider },
     });
     expect(response.headers.get("cache-control")).toBe("private, no-store");
@@ -77,12 +78,41 @@ it("defaults to the website workspace and supports the fixed legacy checkout tar
   expect(signIn).toHaveBeenLastCalledWith({
     redirectUri: `${origin}/api/auth/callback`,
     postRedirectUri: "https://www.loom-labs.ai/workspace",
+    extraParams: { ui_locales: "zh-CN" },
   });
   await routes.login(request("?destination=checkout"));
   expect(signIn).toHaveBeenLastCalledWith({
     redirectUri: `${origin}/api/auth/callback`,
     postRedirectUri: "https://checkout.loom-labs.ai/",
+    extraParams: { ui_locales: "zh-CN" },
   });
+});
+
+it("maps the validated English preference to the official SDK ui_locales parameter", async () => {
+  await routes.login(
+    new Request(`${origin}/api/auth/login?provider=github`, {
+      headers: { cookie: "unrelated=1; LOOM_LOCALE=en" },
+    }),
+  );
+  expect(signIn).toHaveBeenLastCalledWith(
+    expect.objectContaining({ extraParams: { ui_locales: "en" } }),
+  );
+});
+it.each([
+  "",
+  "LOOM_LOCALE=zh",
+  "LOOM_LOCALE=fr",
+  "LOOM_LOCALE=%65n",
+  "LOOM_LOCALE=en; LOOM_LOCALE=zh",
+])("does not forward arbitrary or ambiguous locale input: %s", async (cookie) => {
+  await routes.login(
+    new Request(`${origin}/api/auth/login?ui_locales=attacker&extraParams=attacker`, {
+      headers: { cookie },
+    }),
+  );
+  expect(signIn).toHaveBeenLastCalledWith(
+    expect.objectContaining({ extraParams: { ui_locales: "zh-CN" } }),
+  );
 });
 it.each([
   "?provider=",

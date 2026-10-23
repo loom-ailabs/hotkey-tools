@@ -1,0 +1,11 @@
+{
+  "language": "Language",
+  "chinese": "中文",
+  "english": "English",
+  "theme": "Appearance",
+  "light": "Light",
+  "dark": "Dark",
+  "system": "System",
+  "account": "Profile",
+  "signOut": "Sign out"
+}

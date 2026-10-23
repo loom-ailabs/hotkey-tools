@@ -118,6 +118,8 @@ mise exec -- pnpm deploy:examples
 
 ## Loom AI 主站
 
+两应用通过 `packages/i18n` 共享 next-intl 中英文能力：中文保留原路径，英文使用 `/en`；语言与浅色、深色、跟随系统外观使用仅含偏好值的父域 Cookie。登录后的头像菜单提供个人信息、外观、语言和退出，个人信息页 `/account`、`/en/account` 禁止索引。API、登录回调和支付端点不加语言前缀，认证与权益规则保持不变。配置、消息分工和 SEO 说明见[国际化说明](docs/internationalization.md)。
+
 [主站说明](apps/web/README.md)覆盖本地配置、共享会话和部署；[设计依据](docs/loom-product-design.md)记录 loom-box 愿景、原版 Logo、Linear 风格参考及演示能力边界。
 
 [SEO 与 AI 检索说明](docs/seo-geo.md)记录公开页面的元数据、结构化数据、站点地图和 AI 文本入口，以及私人流程的索引限制与验证方式。

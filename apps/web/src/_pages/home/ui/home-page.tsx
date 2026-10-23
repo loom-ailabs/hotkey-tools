@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { Button } from "@hotkey-tools/ui";
+import { useLocale, useTranslations } from "@hotkey-tools/i18n";
+import { Link } from "@hotkey-tools/i18n/navigation";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -17,45 +19,23 @@ import {
   Sparkles,
 } from "lucide-react";
 import { IntelligenceOrbit } from "./intelligence-orbit";
+import { AccountMenu, AccountProfile } from "./profile-menu";
 import { ProductWorkspace, useProductAccess } from "@/features/product-workspace";
 
-const capabilities = [
-  {
-    number: "01",
-    icon: Monitor,
-    title: "灵感，不止于一个窗口。",
-    body: "从桌面的专注工作，到浏览器里的偶然发现，让智能进入你已经熟悉的日常。",
-    label: "ACROSS YOUR TOOLS",
-  },
-  {
-    number: "02",
-    icon: Layers3,
-    title: "让上下文，自然延续。",
-    body: "把零散的信息织成有用的线索。少一些来回切换，多一些连续思考。",
-    label: "CONTEXT THAT CONNECTS",
-  },
-  {
-    number: "03",
-    icon: Sparkles,
-    title: "从想法，走向下一步。",
-    body: "让人和智能协作，把模糊的灵感，逐步变成清晰、可行动的计划。",
-    label: "FROM THOUGHT TO ACTION",
-  },
-];
-
 function Brand({ compact = false }: { compact?: boolean }) {
+  const t = useTranslations("Web");
   return (
-    <a
+    <Link
       href="/"
       className="inline-flex items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      aria-label="Loom AI 首页"
+      aria-label={t("brandHome")}
     >
       <Image
         src="/loom-mark.svg"
         alt=""
         width={36}
         height={36}
-        className="size-9 opacity-85 invert"
+        className="size-9 opacity-85 dark:invert"
         unoptimized
       />
       <span className="text-lg font-semibold tracking-tight">
@@ -66,94 +46,122 @@ function Brand({ compact = false }: { compact?: boolean }) {
           LABS
         </span>
       )}
-    </a>
+    </Link>
   );
 }
 
-type ProductView = "home" | "vision" | "workspace" | "pricing";
-
+type ProductView = "home" | "vision" | "workspace" | "pricing" | "account";
 export function HomePage({ view = "home" }: { view?: ProductView }) {
+  const t = useTranslations("Web");
+  const locale = useLocale();
   const access = useProductAccess();
   const premium = access.profile?.entitlements.premium ?? false;
+  const checkoutUrl = `https://checkout.loom-labs.ai${locale === "en" ? "/en" : "/"}`;
+  const capabilities = [
+    {
+      number: "01",
+      icon: Monitor,
+      title: t("capability1Title"),
+      body: t("capability1Body"),
+      label: "ACROSS YOUR TOOLS",
+    },
+    {
+      number: "02",
+      icon: Layers3,
+      title: t("capability2Title"),
+      body: t("capability2Body"),
+      label: "CONTEXT THAT CONNECTS",
+    },
+    {
+      number: "03",
+      icon: Sparkles,
+      title: t("capability3Title"),
+      body: t("capability3Body"),
+      label: "FROM THOUGHT TO ACTION",
+    },
+  ];
   return (
     <div className="flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-lg">
         <nav
-          className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-6 lg:px-10"
-          aria-label="主导航"
+          className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-5 sm:px-6 lg:px-10"
+          aria-label={t("navLabel")}
         >
           <Brand />
           <div className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
-            <a className="transition-colors hover:text-foreground" href="/vision">
-              我们的愿景
-            </a>
-            <a className="transition-colors hover:text-foreground" href="/workspace">
-              工作区
-            </a>
-            <a className="transition-colors hover:text-foreground" href="/pricing">
-              体验方案
-            </a>
+            <Link className="transition-colors hover:text-foreground" href="/vision">
+              {t("vision")}
+            </Link>
+            <Link className="transition-colors hover:text-foreground" href="/workspace">
+              {t("workspace")}
+            </Link>
+            <Link className="transition-colors hover:text-foreground" href="/pricing">
+              {t("pricing")}
+            </Link>
           </div>
-          <div className="flex items-center gap-3">
-            <a
-              className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"
-              href={access.profile?.user ? "/workspace" : access.loginUrl}
-            >
-              {access.loading
-                ? "同步中…"
-                : access.profile?.user
-                  ? premium
-                    ? "Loom Pro"
-                    : "我的账号"
-                  : "登录"}
-            </a>
-            <Button asChild size="sm" variant="outline">
-              <a href="/workspace">
-                进入工作区
+          <div className="flex items-center gap-2 sm:gap-3">
+            <AccountMenu access={access} />
+            <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
+              <Link href="/workspace">
+                {t("enterWorkspace")}
                 <ArrowUpRight />
-              </a>
+              </Link>
             </Button>
           </div>
+        </nav>
+        <nav
+          aria-label={t("navLabel")}
+          className="flex items-center justify-center gap-8 border-t px-5 py-3 text-xs text-muted-foreground md:hidden"
+        >
+          <Link href="/vision">{t("vision")}</Link>
+          <Link href="/workspace">{t("workspace")}</Link>
+          <Link href="/pricing">{t("pricing")}</Link>
         </nav>
       </header>
       <main className="mx-auto w-full max-w-7xl flex-1 px-6 lg:px-10">
         {view !== "home" && (
           <h1 className="sr-only">
-            {view === "workspace" ? "Loom 工作区" : view === "vision" ? "我们的愿景" : "体验方案"}
+            {view === "workspace"
+              ? t("workName")
+              : view === "vision"
+                ? t("vision")
+                : view === "account"
+                  ? t("accountTitle")
+                  : t("pricing")}
           </h1>
         )}
+        {view === "account" && <AccountProfile access={access} />}
         {view === "home" && (
           <>
             <section className="grid items-center gap-8 pt-16 pb-16 lg:grid-cols-5 lg:pt-24 lg:pb-24">
               <div className="lg:col-span-3">
                 <div className="mb-7 inline-flex items-center gap-2 rounded-full border bg-surface px-3 py-1.5 text-xs text-muted-foreground">
                   <span className="size-1.5 rounded-full bg-link" />
-                  为人与智能协作而构建
+                  {t("heroBadge")}
                   <ChevronRight className="size-3" />
                 </div>
                 <h1 className="text-4xl leading-tight font-medium tracking-tight sm:text-6xl lg:text-7xl">
-                  连接智能，
+                  {t("heroTitle")}
                   <br />
-                  <span className="text-link">织就你的下一步。</span>
+                  <span className="text-link">{t("heroAccent")}</span>
                 </h1>
                 <p className="mt-7 max-w-lg text-base leading-8 text-muted-foreground sm:text-lg">
-                  让桌面、浏览器与编辑器里的灵感，在同一个工作区延续。Loom AI
-                  希望成为与你一起思考、一起创造的智能伙伴。
+                  {t("heroBody")}
                 </p>
                 <div className="mt-9 flex flex-wrap items-center gap-4">
                   <Button asChild size="lg">
-                    <a href="/workspace">
-                      探索 Loom AI
+                    <Link href="/workspace">
+                      {t("explore")}
                       <ArrowRight />
-                    </a>
+                    </Link>
                   </Button>
-                  <a
+                  <Link
                     href="/vision"
                     className="inline-flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                   >
-                    了解我们的愿景
+                    {t("learnVision")}
                     <ArrowRight className="size-4" />
-                  </a>
+                  </Link>
                 </div>
                 <p className="mt-6 font-mono text-xs tracking-wide text-muted-foreground">
                   CONNECTING INTELLIGENCE. CRAFTING TOMORROW.
@@ -166,7 +174,7 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
             <div className="flex flex-wrap items-center justify-between gap-5 border-y py-5 text-xs text-muted-foreground">
               <p className="flex items-center gap-2">
                 <Orbit className="size-4 text-link" />
-                一个共同的愿景，一段连续的体验。
+                {t("flowLine")}
               </p>
               <div className="flex items-center gap-5 font-mono">
                 <span className="flex items-center gap-2">
@@ -186,14 +194,14 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
           </>
         )}
         {(view === "home" || view === "vision") && (
-          <section id="vision" className="scroll-mt-24 pt-20 sm:pt-28">
+          <section className="pt-20 sm:pt-28">
             <p className="mb-4 font-mono text-xs tracking-widest text-link">
               BUILT AROUND YOUR FLOW
             </p>
             <h2 className="max-w-3xl text-3xl leading-snug font-medium tracking-tight sm:text-4xl">
-              工具各有所长，
+              {t("visionTitle")}
               <br />
-              <span className="text-muted-foreground">你的思考不该被它们分开。</span>
+              <span className="text-muted-foreground">{t("visionAccent")}</span>
             </h2>
             <div className="mt-12 grid gap-8 md:grid-cols-3 md:gap-0">
               {capabilities.map(({ number, icon: Icon, title, body, label }) => (
@@ -214,35 +222,29 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
         )}
         {(view === "home" || view === "workspace") && <ProductWorkspace access={access} />}
         {(view === "home" || view === "pricing") && (
-          <section id="pricing" className="scroll-mt-24 border-t py-20 sm:py-28">
+          <section className="border-t py-20 sm:py-28">
             <div className="grid gap-10 lg:grid-cols-3">
               <div>
                 <p className="mb-3 font-mono text-xs tracking-widest text-link">
                   02 / START EXPLORING
                 </p>
                 <h2 className="text-3xl font-medium tracking-tight sm:text-4xl">
-                  先体验，再连接
+                  {t("pricingTitle")}
                   <br />
-                  更多可能。
+                  {t("pricingAccent")}
                 </h2>
                 <p className="mt-5 max-w-xs text-sm leading-7 text-muted-foreground">
-                  这是 Loom AI 的产品演示。登录与付费流程真实可用，工作计划使用预置示例。
+                  {t("pricingBody")}
                 </p>
-                <p className="mt-4 text-xs leading-6 text-muted-foreground">
-                  当前仅限 Sandbox 测试，不会产生真实扣款。
-                </p>
+                <p className="mt-4 text-xs leading-6 text-muted-foreground">{t("sandboxNotice")}</p>
               </div>
               <div className="rounded-xl border bg-surface p-7">
                 <Box className="size-5 text-muted-foreground" />
                 <h3 className="mt-5 text-lg font-medium">Loom Explore</h3>
-                <p className="mt-2 text-sm text-muted-foreground">从认识你的新伙伴开始。</p>
-                <p className="mt-7 text-4xl tracking-tight">免费</p>
+                <p className="mt-2 text-sm text-muted-foreground">{t("exploreBody")}</p>
+                <p className="mt-7 text-4xl tracking-tight">{t("free")}</p>
                 <ul className="my-7 space-y-3 text-sm text-muted-foreground">
-                  {[
-                    "探索产品愿景与工作区",
-                    "使用 Google 或 GitHub 登录",
-                    "在熟悉的工具之间想象新连接",
-                  ].map((x) => (
+                  {[t("exploreBenefit1"), t("exploreBenefit2"), t("exploreBenefit3")].map((x) => (
                     <li key={x} className="flex gap-2">
                       <Check className="mt-0.5 size-4 shrink-0" />
                       {x}
@@ -250,10 +252,10 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
                   ))}
                 </ul>
                 <Button asChild variant="outline" className="w-full">
-                  <a href="/workspace">
-                    开始探索
+                  <Link href="/workspace">
+                    {t("startExploring")}
                     <ArrowRight />
-                  </a>
+                  </Link>
                 </Button>
               </div>
               <div className="relative rounded-xl border border-link/40 bg-surface p-7">
@@ -264,16 +266,12 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
                   </span>
                 </div>
                 <h3 className="mt-5 text-lg font-medium">Loom Pro</h3>
-                <p className="mt-2 text-sm text-muted-foreground">亲手体验，从解锁到使用。</p>
+                <p className="mt-2 text-sm text-muted-foreground">{t("proBody")}</p>
                 <p className="mt-7 text-4xl tracking-tight">
-                  $1<span className="ml-2 text-xs text-muted-foreground">USD · 一次性测试付款</span>
+                  $1<span className="ml-2 text-xs text-muted-foreground">{t("testPayment")}</span>
                 </p>
                 <ul className="my-7 space-y-3 text-sm text-muted-foreground">
-                  {[
-                    "解锁 Pro 工作计划演示",
-                    "同一账号重新登录后继续体验",
-                    "一次性购买，无订阅或自动续费",
-                  ].map((x) => (
+                  {[t("proBenefit1"), t("proBenefit2"), t("proBenefit3")].map((x) => (
                     <li key={x} className="flex gap-2">
                       <Check className="mt-0.5 size-4 shrink-0 text-link" />
                       {x}
@@ -281,18 +279,17 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
                   ))}
                 </ul>
                 <Button asChild className="w-full">
-                  <a
-                    href={
-                      premium
-                        ? "/workspace"
-                        : access.profile?.user
-                          ? "https://checkout.loom-labs.ai"
-                          : access.loginUrl
-                    }
-                  >
-                    {premium ? "打开 Pro 演示" : access.profile?.user ? "前往解锁" : "登录后解锁"}
-                    <ArrowRight />
-                  </a>
+                  {premium ? (
+                    <Link href="/workspace">
+                      {t("openPro")}
+                      <ArrowRight />
+                    </Link>
+                  ) : (
+                    <a href={access.profile?.user ? checkoutUrl : access.loginUrl}>
+                      {access.profile?.user ? t("unlock") : t("loginToUnlock")}
+                      <ArrowRight />
+                    </a>
+                  )}
                 </Button>
               </div>
             </div>
@@ -303,14 +300,12 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
             <p className="mb-5 font-mono text-xs tracking-widest text-link">
               THE NEXT THREAD STARTS WITH YOU
             </p>
-            <h2 className="text-3xl font-medium tracking-tight sm:text-5xl">
-              下一段创造，从这里开始。
-            </h2>
+            <h2 className="text-3xl font-medium tracking-tight sm:text-5xl">{t("closingTitle")}</h2>
             <Button asChild size="lg" className="mt-8">
-              <a href="/workspace">
-                进入 Loom 工作区
+              <Link href="/workspace">
+                {t("enterWorkspace")}
                 <ArrowUpRight />
-              </a>
+              </Link>
             </Button>
           </section>
         )}
@@ -319,11 +314,11 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-6 py-8 lg:px-10">
           <Brand compact />
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Loom AI · 连接智能，织就未来。
+            © {new Date().getFullYear()} Loom AI · {t("footerVision")}
           </p>
-          <a href="/pricing" className="text-xs text-muted-foreground hover:text-foreground">
-            产品演示 · Sandbox
-          </a>
+          <Link href="/pricing" className="text-xs text-muted-foreground hover:text-foreground">
+            {t("demoSandbox")}
+          </Link>
         </div>
       </footer>
     </div>

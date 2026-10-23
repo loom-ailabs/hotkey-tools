@@ -75,6 +75,7 @@
 }
 
 /* 来自 Loom Desktop 正式深色主题；交互蓝沿用其链接与焦点颜色。 */
+.dark,
 .loom-dark {
   color-scheme: dark;
   --background: #181818;
@@ -109,6 +110,52 @@
   --corner-md: 0.5rem;
   --corner-lg: 0.625rem;
   --corner-xl: 0.75rem;
+}
+
+@keyframes loom-login-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes loom-login-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.03);
+  }
+}
+@keyframes loom-login-trace {
+  to {
+    stroke-dashoffset: -104;
+  }
+}
+.loom-login-orbit {
+  transform-origin: center;
+  animation: loom-login-orbit 28s linear infinite;
+}
+.loom-login-orbit-reverse {
+  animation-direction: reverse;
+  animation-duration: 36s;
+}
+.loom-login-pulse {
+  transform-origin: center;
+  animation: loom-login-pulse 4s ease-in-out infinite;
+}
+.loom-login-trace {
+  stroke-dasharray: 8 18;
+  animation: loom-login-trace 6s linear infinite;
+}
+.loom-login-paused :is(.loom-login-orbit, .loom-login-pulse, .loom-login-trace) {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.loom-login-orbit, .loom-login-pulse, .loom-login-trace) {
+    animation: none;
+  }
 }
 @layer base {
   * {

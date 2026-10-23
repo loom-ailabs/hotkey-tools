@@ -15,7 +15,21 @@ const publicUrls = [
 describe("public search and agent discovery", () => {
   it("limits the sitemap to canonical public pages without fabricated publication dates", () => {
     const entries = sitemap();
-    expect(entries.map((entry) => entry.url)).toEqual(publicUrls);
+    expect(entries.map((entry) => entry.url)).toEqual(
+      publicUrls.flatMap((url) => [
+        url,
+        url === "https://www.loom-labs.ai/"
+          ? "https://www.loom-labs.ai/en"
+          : url.replace("https://www.loom-labs.ai", "https://www.loom-labs.ai/en"),
+      ]),
+    );
+    expect(entries).toHaveLength(8);
+    expect(entries.every((entry) => !entry.url.includes("/account"))).toBe(true);
+    for (const entry of entries) {
+      expect(entry.alternates?.languages).toHaveProperty("zh-CN");
+      expect(entry.alternates?.languages).toHaveProperty("en");
+      expect(entry.alternates?.languages).toHaveProperty("x-default");
+    }
     expect(entries.every((entry) => entry.lastModified === undefined)).toBe(true);
     expect(robots()).toMatchObject({
       rules: { userAgent: "*", allow: "/" },
@@ -29,6 +43,11 @@ describe("public search and agent discovery", () => {
       const metadata = createPageMetadata(page.path);
       expect(metadata.alternates?.canonical).toBe(publicUrls[index]);
       expect(metadata.openGraph?.url).toBe(publicUrls[index]);
+      expect(metadata.alternates?.languages?.en).toContain("/en");
+      const english = createPageMetadata(page.path, "en");
+      expect(english.alternates?.canonical).toContain("/en");
+      expect(english.openGraph?.url).toBe(english.alternates?.canonical);
+      expect(english.description).not.toBe(metadata.description);
       titles.add(JSON.stringify(metadata.title));
     }
     expect(titles.size).toBe(4);

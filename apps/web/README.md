@@ -10,6 +10,12 @@
 
 共享实现位于 `packages/identity-core`，通过官方 Node/edge SDK 处理 OIDC 与刷新，Next cookies 只读写随机标识；D1 是可撤销会话的权威存储。WWW 不加载 Stripe SDK 或密钥。购买仍在 checkout，回到 WWW 后实时查询同一份 D1 权益。
 
+## 中英文、外观与个人信息
+
+中文继续使用原四个公开页面路径，英文使用 `/en` 对应页面，均可直接访问与刷新。`/account`、`/en/account` 提供当前用户信息并禁止索引，不进入公开站点地图。头像菜单包含个人信息、浅色/深色/跟随系统、中文/English 与退出；头像不作为身份或付费授权依据。
+
+`packages/i18n` 管理 next-intl 路由和消息，`packages/ui` 管理外观与菜单组件。`LOOM_LOCALE`、`LOOM_THEME` 只记录非敏感偏好，生产共享父域；它们与 HttpOnly 登录会话分开。页面协商和偏好相关 SSR 使用 `private,no-store`，公开 sitemap、robots、llms 文本保持独立；API 与认证回调不加语言前缀。详见[国际化说明](../../docs/internationalization.md)。
+
 ## 本地运行
 
 复制 `.env.example` 为 `.env.local` 与 `.dev.vars`。真实密钥只填写 `.dev.vars`；`.env.local` 的密钥保持空值，OpenNext 会把 dotenv 值编进 Worker。构建前 guard 会拒绝在 dotenv 中放置 Secret/Token/API key。

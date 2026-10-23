@@ -4,6 +4,12 @@
 
 Logto 负责认证和短期令牌刷新，D1 保存可撤销会话、用户、订单和权益，Stripe Sandbox 负责测试付款。付费权限由业务数据库判断，不依赖 Logto 的 RBAC 或自定义 API resources。开发租户可用功能不能代替生产 Free 套餐的验证。
 
+## 中英文与外观
+
+登录与购买页面保留中文根路径，并提供英文 `/en`；界面使用共享浅色、深色、跟随系统与语言偏好。登录页展示产品轮播，购买页沿用现有订单与权益逻辑。生产 `LOOM_LOCALE`、`LOOM_THEME` 只保存非敏感偏好，与 HttpOnly 随机会话标识分开；identity 所有语言页面仍禁止索引。
+
+`/api/auth/login`、callback、订单与 Stripe Webhook 保持原端点，不带语言前缀。有效语言偏好只通过官方 SDK 的固定 `ui_locales=zh-CN|en` 影响托管登录界面，不改变身份验证或返回地址校验。消息和布局接线见[国际化说明](../../docs/internationalization.md)；主站头像菜单和个人信息页由 `apps/web` 承载。
+
 ## 本地启动
 
 在仓库根目录完成初始化：

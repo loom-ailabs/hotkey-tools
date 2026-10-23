@@ -6,6 +6,15 @@ import { validateReturnTarget } from "./return-target";
 
 type AuthClient = Awaited<ReturnType<ReturnType<typeof createAuthService>["getAuthClient"]>>;
 
+function signInUiLocale(request: Request): "zh-CN" | "en" {
+  const preferences = (request.headers.get("cookie") ?? "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter((item) => item.startsWith("LOOM_LOCALE="))
+    .map((item) => item.slice("LOOM_LOCALE=".length));
+  return preferences.length === 1 && preferences[0] === "en" ? "en" : "zh-CN";
+}
+
 export function resolveLoginReturnTarget(
   search: URLSearchParams,
   auth: Pick<AuthClient, "config" | "successUrl">,
@@ -83,6 +92,7 @@ export function createAuthRoutes({
       const { url } = await auth.client.handleSignIn({
         redirectUri: `${auth.config.baseUrl}/api/auth/callback`,
         postRedirectUri: target,
+        extraParams: { ui_locales: signInUiLocale(request) },
         ...(provider ? { directSignIn: { method: "social" as const, target: provider } } : {}),
       });
       return NextResponse.redirect(url, { status: 303, headers: privateHeaders });

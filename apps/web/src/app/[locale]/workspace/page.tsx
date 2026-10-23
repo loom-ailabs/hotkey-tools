@@ -1,7 +1,10 @@
+import { getLocale } from "@hotkey-tools/i18n/server";
 import { HomePage } from "@/_pages/home";
 import { createPageMetadata } from "@/shared/config/seo";
 
-export const metadata = createPageMetadata("/workspace");
+export async function generateMetadata() {
+  return createPageMetadata("/workspace", await getLocale());
+}
 
 export default function Page() {
   return <HomePage view="workspace" />;

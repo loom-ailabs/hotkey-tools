@@ -61,6 +61,30 @@ afterEach(() => {
 });
 
 describe("Logto configuration and identity", () => {
+  it.each([
+    [
+      "https://avatars.githubusercontent.com/u/42?v=4",
+      "https://avatars.githubusercontent.com/u/42?v=4",
+    ],
+    ["http://avatar.example/photo", undefined],
+    ["javascript:alert(1)", undefined],
+    ["data:image/png;base64,AA", undefined],
+    ["https://user:password@avatar.example/photo", undefined],
+    ["not-a-url", undefined],
+    [42, undefined],
+    ["https://avatar.example/" + "a".repeat(2050), undefined],
+  ])("only exposes safe HTTPS profile images: %s", async (picture, expected) => {
+    mocks.getContext.mockResolvedValue({
+      isAuthenticated: true,
+      claims: { sub: "avatar-user", exp: Math.floor(Date.now() / 1000) + 300, picture },
+    });
+    mocks.getDatabase.mockResolvedValue({
+      prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }),
+    });
+    const user = await getUser();
+    expect(user?.picture).toBe(expected);
+    if (!expected) expect(user).not.toHaveProperty("picture");
+  });
   it("keeps the default page when a separate login host is not configured", async () => {
     mocks.getEnv.mockResolvedValue({});
     expect(await getLoginPageConfig()).toBeNull();

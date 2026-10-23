@@ -3,7 +3,17 @@ import "server-only";
 import LogtoClient, { getLogtoContext, type SessionConfig } from "./session";
 import { ApiError } from "./http";
 
-export type IdentityUser = { id: string; name?: string; email?: string };
+export type IdentityUser = { id: string; name?: string; email?: string; picture?: string };
+
+function profilePicture(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > 2048) return undefined;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
 export type AuthEnv = {
   APP_URL?: string;
   LOGIN_URL?: string;
@@ -191,10 +201,12 @@ export function createAuthService({
       return null;
     }
 
+    const picture = profilePicture(claims.picture);
     const user: IdentityUser = {
       id: claims.sub,
       ...(typeof claims.name === "string" ? { name: claims.name } : {}),
       ...(typeof claims.email === "string" ? { email: claims.email } : {}),
+      ...(picture ? { picture } : {}),
     };
     await database
       .prepare(

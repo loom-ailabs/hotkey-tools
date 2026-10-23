@@ -1,94 +1,122 @@
+"use client";
+
 import Image from "next/image";
-import { Button } from "@hotkey-tools/ui";
-import { ArrowLeft, ArrowRight, ShieldCheck } from "lucide-react";
+import { localizeUrl, useTranslations } from "@hotkey-tools/i18n";
+import { useLocaleSwitcher } from "@hotkey-tools/i18n/navigation";
+import { Alert, AlertDescription, AlertTitle, Button, PreferencesMenu } from "@hotkey-tools/ui";
+import { ArrowLeft, CircleAlert, ShieldCheck } from "lucide-react";
+import { LoginShowcase } from "./login-showcase";
+import { GithubMark, GoogleMark } from "./social-icons";
 
 export type SignInPageProps = {
   googleSignInUrl: string;
   githubSignInUrl: string;
+  notice?: { title: string; message: string };
 };
 
-export function SignInPage({ googleSignInUrl, githubSignInUrl }: SignInPageProps) {
+export function SignInPage({ googleSignInUrl, githubSignInUrl, notice }: SignInPageProps) {
+  const t = useTranslations("SignIn.login");
+  const { locale, switchLocale } = useLocaleSwitcher();
+  const homeUrl = localizeUrl("https://www.loom-labs.ai/", locale);
   return (
-    <div className="flex min-h-screen flex-col px-5 sm:px-8">
-      <header className="mx-auto flex h-20 w-full max-w-5xl items-center justify-between gap-4 border-b">
-        <a
-          href="https://www.loom-labs.ai/"
-          className="flex items-center gap-2.5 rounded-md text-base font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="Loom AI 首页"
-        >
-          <Image
-            src="/loom-mark.svg"
-            alt=""
-            width={36}
-            height={36}
-            className="size-9 opacity-85 invert"
-            unoptimized
-            priority
-          />
-          Loom AI
-        </a>
-        <Button asChild variant="ghost" className="h-9 px-3">
-          <a href="https://www.loom-labs.ai/workspace">
-            <ArrowLeft aria-hidden="true" />
-            返回工作区
+    <div className="grid min-h-svh bg-background lg:grid-cols-2">
+      <div className="flex min-h-svh flex-col px-6 pb-6 pt-5 sm:px-10 lg:px-12">
+        <header className="flex items-center justify-between gap-5">
+          <a
+            href={homeUrl}
+            aria-label={t("homeLabel")}
+            className="flex items-center gap-2.5 rounded-md text-lg font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Image
+              src="/loom-mark.svg"
+              alt=""
+              width={36}
+              height={36}
+              className="size-9 opacity-85 dark:invert"
+              unoptimized
+              priority
+            />
+            Loom AI
           </a>
-        </Button>
-      </header>
-      <main className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-12 py-12 lg:grid-cols-2 lg:gap-20 lg:py-20">
-        <div className="max-w-lg space-y-6">
-          <p className="text-xs font-medium tracking-widest text-link">LOOM ACCOUNT</p>
-          <h1 className="text-4xl leading-tight font-semibold tracking-tight sm:text-5xl">
-            连接智能，
-            <br />
-            编织未来。
-          </h1>
-          <p className="max-w-sm text-sm leading-7 text-muted-foreground">
-            让灵感与工具在同一个工作区相遇。
-            <br />
-            登录 Loom，继续你的下一次创造。
-          </p>
-          <p className="border-l border-border pl-4 text-xs leading-6 text-muted-foreground">
-            Connecting Intelligence.
-            <br />
-            Crafting Tomorrow.
-          </p>
-        </div>
-        <section
-          aria-labelledby="sign-in-title"
-          className="w-full max-w-sm border-t pt-8 lg:justify-self-end lg:border-t-0 lg:border-l lg:pl-10 lg:pt-0"
-        >
-          <div className="mb-8 space-y-3">
-            <h2 id="sign-in-title" className="text-2xl font-semibold tracking-tight">
-              欢迎来到 Loom
-            </h2>
-            <p className="text-sm leading-6 text-muted-foreground">
-              使用已有账号继续。首次登录将创建你的 Loom 账号。
+          <PreferencesMenu
+            locale={locale}
+            onLocaleChange={switchLocale}
+            labels={{
+              settings: t("settings"),
+              theme: t("theme"),
+              light: t("light"),
+              dark: t("dark"),
+              system: t("system"),
+              language: t("language"),
+            }}
+          />
+        </header>
+        <main className="flex flex-1 items-center justify-center py-16">
+          <section aria-labelledby="sign-in-title" className="w-full max-w-sm">
+            <p className="mb-4 text-xs font-medium tracking-widest text-muted-foreground">
+              {t("eyebrow")}
             </p>
-          </div>
-          <div className="space-y-3">
-            <Button asChild variant="outline" className="h-9 w-full justify-between bg-control">
-              <a href={googleSignInUrl}>
-                使用 Google 继续
-                <ArrowRight aria-hidden="true" />
-              </a>
-            </Button>
-            <Button asChild variant="outline" className="h-9 w-full justify-between bg-control">
-              <a href={githubSignInUrl}>
-                使用 GitHub 继续
-                <ArrowRight aria-hidden="true" />
-              </a>
-            </Button>
-          </div>
-          <p className="mt-6 flex items-start gap-2 text-xs leading-6 text-muted-foreground">
-            <ShieldCheck className="mt-1 size-4 shrink-0" aria-hidden="true" />
-            请在 Google 或 GitHub 的官方页面完成授权，无需向 Loom 提供密码。
-          </p>
-        </section>
-      </main>
-      <footer className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 border-t py-6 text-xs text-muted-foreground">
-        <span>© {new Date().getFullYear()} Loom AI</span>
-        <span>Connecting Intelligence. Crafting Tomorrow.</span>
-      </footer>
+            <h1
+              id="sign-in-title"
+              className="text-3xl font-medium leading-tight tracking-tight sm:text-4xl"
+            >
+              {t("title")}
+            </h1>
+            <p className="mt-4 text-sm leading-7 text-muted-foreground">{t("description")}</p>
+            {notice ? (
+              <Alert variant="warning" className="mt-6">
+                <CircleAlert aria-hidden="true" />
+                <div>
+                  <AlertTitle>{notice.title}</AlertTitle>
+                  <AlertDescription>{notice.message}</AlertDescription>
+                </div>
+              </Alert>
+            ) : null}
+            <div className="mt-8 space-y-3">
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 w-full rounded-full bg-control/50 text-foreground hover:bg-control-hover"
+              >
+                <a href={googleSignInUrl}>
+                  <GoogleMark />
+                  {t("google")}
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 w-full rounded-full bg-control/50 text-foreground hover:bg-control-hover"
+              >
+                <a href={githubSignInUrl}>
+                  <GithubMark />
+                  {t("github")}
+                </a>
+              </Button>
+            </div>
+            <p className="mt-6 text-center text-xs leading-6 text-muted-foreground">
+              {t("firstTime")}
+            </p>
+            <div className="mt-7 border-t pt-6">
+              <p className="flex items-start justify-center gap-2 text-xs leading-6 text-muted-foreground">
+                <ShieldCheck className="mt-1 size-3.5 shrink-0" aria-hidden="true" />
+                {t("security")}
+              </p>
+            </div>
+          </section>
+        </main>
+        <footer className="flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} Loom AI</span>
+          <a
+            href={homeUrl}
+            className="inline-flex items-center gap-1.5 rounded-md outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowLeft className="size-3.5" aria-hidden="true" />
+            {t("back")}
+          </a>
+        </footer>
+      </div>
+      <LoginShowcase />
     </div>
   );
 }

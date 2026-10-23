@@ -1,26 +1,33 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "@hotkey-tools/i18n";
 
 export type ProductProfile = {
-  user: { id: string; name?: string; email?: string } | null;
+  user: { id: string; name?: string; email?: string; picture?: string } | null;
   entitlements: { premium: boolean };
 };
 
+class AccessError extends Error {
+  constructor(readonly type?: string) {
+    super("access_request_failed");
+  }
+}
 async function readApi<T>(path: string): Promise<T> {
   const response = await fetch(path, { cache: "no-store", credentials: "same-origin" });
   const value: unknown = await response.json();
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("服务暂时不可用，请稍后重试。");
+    throw new AccessError();
   }
-  const body = value as { code?: unknown; msg?: unknown; data?: unknown };
+  const body = value as { code?: unknown; error?: { type?: unknown }; data?: unknown };
   if (!response.ok || body.code !== 0) {
-    throw new Error(typeof body.msg === "string" ? body.msg : "请求失败，请稍后重试。");
+    throw new AccessError(typeof body.error?.type === "string" ? body.error.type : undefined);
   }
   return body.data as T;
 }
 
 export function useProductAccess() {
+  const t = useTranslations("Web");
   const [profile, setProfile] = useState<ProductProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -37,11 +44,15 @@ export function useProductAccess() {
     } catch (cause) {
       setProfile(null);
       setUnlocked(false);
-      setError(cause instanceof Error ? cause.message : "暂时无法读取账号，请重试。");
+      setError(
+        cause instanceof AccessError && cause.type === "session_busy"
+          ? t("errorBusy")
+          : t("errorAccount"),
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
   useEffect(() => {
     const returnTo = new URL(window.location.href);
     returnTo.hash = "";
@@ -62,12 +73,21 @@ export function useProductAccess() {
     setError("");
     try {
       const result = await readApi<{ unlocked: boolean }>("/api/premium");
-      if (!result.unlocked) throw new Error("请刷新账号状态后重试。");
+      if (!result.unlocked) throw new AccessError();
       setUnlocked(true);
     } catch (cause) {
       // Refresh the current entitlement after a rejected operation, including refunds.
       await refresh();
-      setError(cause instanceof Error ? cause.message : "暂时无法打开演示，请重试。");
+      const kind = cause instanceof AccessError ? cause.type : undefined;
+      setError(
+        kind === "premium_required"
+          ? t("errorPremium")
+          : kind === "unauthenticated" || kind === "session_renewal_failed"
+            ? t("errorAuth")
+            : kind === "session_busy"
+              ? t("errorBusy")
+              : t("errorDemo"),
+      );
     } finally {
       setRunning(false);
     }

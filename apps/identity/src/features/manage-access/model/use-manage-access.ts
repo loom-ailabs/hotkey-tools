@@ -1,14 +1,36 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "@hotkey-tools/i18n";
 import { ApiRequestError } from "@/shared/api";
 import { createCheckout, fetchOrder, fetchPremium, fetchProfile } from "../api/access-api";
 import type { Profile } from "./types";
 
-const asError = (error: unknown, fallback: string) =>
-  error instanceof Error ? error : new Error(fallback);
+const errorKeys = {
+  AUTH_NOT_CONFIGURED: "configuration",
+  database_not_configured: "configuration",
+  billing_not_configured: "configuration",
+  sandbox_required: "sandbox",
+  invalid_price_configuration: "sandbox",
+  unauthenticated: "authentication",
+  session_renewal_failed: "authentication",
+  session_busy: "busy",
+  premium_required: "permission",
+  invalid_origin: "origin",
+  order_not_found: "orderUnavailable",
+  order_unavailable: "orderUnavailable",
+  order_closed: "checkoutClosed",
+  checkout_closed: "checkoutClosed",
+  checkout_attempt_expired: "checkoutClosed",
+  checkout_unavailable: "checkoutUnavailable",
+  already_unlocked: "alreadyUnlocked",
+  service_unavailable: "unavailable",
+} as const;
+type ErrorKey = (typeof errorKeys)[keyof typeof errorKeys];
+type FallbackKey = "profile" | "order" | "refresh" | "purchase" | "premium";
 
 export function useManageAccess() {
+  const t = useTranslations("Access");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -18,6 +40,25 @@ export function useManageAccess() {
   const [featureResult, setFeatureResult] = useState("");
   const [pollVersion, setPollVersion] = useState(0);
   const requestId = useRef<string | null>(null);
+
+  const asError = useCallback(
+    (error: unknown, fallback: FallbackKey) => {
+      if (error instanceof ApiRequestError) {
+        const key = Object.hasOwn(errorKeys, error.type ?? "")
+          ? errorKeys[error.type as keyof typeof errorKeys]
+          : fallback;
+        return new ApiRequestError(
+          t(`errors.${key as ErrorKey | FallbackKey}`),
+          error.status,
+          error.code,
+          error.type,
+        );
+      }
+      // Transport errors and upstream messages are never shown in the wrong language.
+      return new Error(t(`errors.${fallback}`));
+    },
+    [t],
+  );
 
   const reloadProfile = useCallback(async (signal?: AbortSignal) => {
     const result = await fetchProfile(signal);
@@ -29,18 +70,18 @@ export function useManageAccess() {
     const controller = new AbortController();
     reloadProfile(controller.signal)
       .catch((error: unknown) => {
-        if (!controller.signal.aborted) setFailure(asError(error, "无法读取登录状态。"));
+        if (!controller.signal.aborted) setFailure(asError(error, "profile"));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [reloadProfile]);
+  }, [reloadProfile, asError]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "cancelled") {
-      setNotice("付款已取消，你可以随时重新购买。");
+      setNotice(t("notices.cancelled"));
       return;
     }
     const orderId = params.get("order_id");
@@ -56,20 +97,21 @@ export function useManageAccess() {
         if (order.status === "paid" || order.status === "refunded") {
           await reloadProfile(controller.signal);
           if (controller.signal.aborted) return;
-          setNotice(order.status === "paid" ? "付款已确认，功能已解锁。" : "这笔订单已退款。");
-          if (order.status === "paid") window.history.replaceState({}, "", "/");
+          setNotice(t(order.status === "paid" ? "notices.paid" : "notices.refunded"));
+          if (order.status === "paid")
+            window.history.replaceState({}, "", window.location.pathname);
           return;
         }
         attempts += 1;
         if (attempts < 15) {
-          setNotice("正在确认付款结果，请稍候…");
+          setNotice(t("notices.confirming"));
           timer = setTimeout(poll, 2000);
         } else {
-          setNotice("付款结果仍在处理中，可点击刷新状态重新查询。关闭页面不会影响到账确认。");
+          setNotice(t("notices.pending"));
         }
       } catch (error) {
         if (!controller.signal.aborted) {
-          setFailure(asError(error, "暂时无法查询订单，请刷新状态重试。"));
+          setFailure(asError(error, "order"));
         }
       }
     };
@@ -78,7 +120,7 @@ export function useManageAccess() {
       controller.abort();
       if (timer) clearTimeout(timer);
     };
-  }, [reloadProfile, pollVersion]);
+  }, [reloadProfile, pollVersion, t, asError]);
 
   const refresh = async () => {
     setRefreshing(true);
@@ -87,7 +129,7 @@ export function useManageAccess() {
     try {
       await reloadProfile();
     } catch (error) {
-      setFailure(asError(error, "无法刷新账号状态，请稍后重试。"));
+      setFailure(asError(error, "refresh"));
     } finally {
       setRefreshing(false);
     }
@@ -105,14 +147,14 @@ export function useManageAccess() {
       const result = await createCheckout(requestId.current);
       if (result.status === "paid") {
         await reloadProfile();
-        setNotice("这笔订单已付款，功能已解锁。");
+        setNotice(t("notices.alreadyPaid"));
       } else if (result.checkoutUrl) {
         window.location.assign(result.checkoutUrl);
       } else {
-        throw new Error("暂时无法打开收银台，请稍后重试。");
+        setFailure(new Error(t("errors.openCheckout")));
       }
     } catch (error) {
-      setFailure(asError(error, "暂时无法发起购买。"));
+      setFailure(asError(error, "purchase"));
     } finally {
       setAction(null);
     }
@@ -122,10 +164,10 @@ export function useManageAccess() {
     setAction("premium");
     setFailure(null);
     try {
-      const result = await fetchPremium();
-      setFeatureResult(result.message ?? "权限验证通过，可以使用高级功能。");
+      await fetchPremium();
+      setFeatureResult(t("notices.premiumVerified"));
     } catch (error) {
-      setFailure(asError(error, "暂时无法使用该功能。"));
+      setFailure(asError(error, "premium"));
     } finally {
       setAction(null);
     }

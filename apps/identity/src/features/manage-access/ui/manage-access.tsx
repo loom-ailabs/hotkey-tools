@@ -1,6 +1,8 @@
 "use client";
 
 import { Alert, AlertDescription, AlertTitle, Badge, Button, cn } from "@hotkey-tools/ui";
+import { localizeUrl, useLocale, useTranslations } from "@hotkey-tools/i18n";
+import { Link } from "@hotkey-tools/i18n/navigation";
 import {
   ArrowRight,
   Check,
@@ -17,10 +19,11 @@ import {
 } from "lucide-react";
 import { useManageAccess } from "../model/use-manage-access";
 
-const benefits = ["购买记录关联当前账号", "付款确认后自动开通", "重新登录后继续使用"];
-const workspaceUrl = "https://www.loom-labs.ai/workspace";
-
 export function ManageAccess() {
+  const t = useTranslations("Access");
+  const locale = useLocale();
+  const benefits = [t("benefits.account"), t("benefits.confirmation"), t("benefits.persistence")];
+  const workspaceUrl = localizeUrl("https://www.loom-labs.ai/workspace", locale);
   const state = useManageAccess();
   const user = state.profile?.user;
   const disabled = state.loading || state.action !== null || state.configurationMissing;
@@ -29,7 +32,7 @@ export function ManageAccess() {
     <section aria-labelledby="access-title" className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h2 id="access-title" className="text-sm font-medium text-muted-foreground">
-          账号与使用权限
+          {t("sectionTitle")}
         </h2>
         <Button
           variant="outline"
@@ -41,7 +44,7 @@ export function ManageAccess() {
             aria-hidden="true"
             className={cn(state.refreshing && "motion-safe:animate-spin")}
           />
-          {state.refreshing ? "刷新中…" : "刷新状态"}
+          {state.refreshing ? t("refreshing") : t("refresh")}
         </Button>
       </div>
 
@@ -55,15 +58,11 @@ export function ManageAccess() {
             )}
             <div className="min-w-0">
               <AlertTitle>
-                {state.configurationMissing ? "服务尚未配置完成" : "暂时未能完成操作"}
+                {state.configurationMissing ? t("configurationTitle") : t("failureTitle")}
               </AlertTitle>
               <AlertDescription>
                 <p className="break-words">{state.failure.message}</p>
-                <p>
-                  {state.configurationMissing
-                    ? "完成服务配置后，点击刷新状态即可继续。"
-                    : "可以点击刷新状态重试；付款确认不会因关闭页面而中断。"}
-                </p>
+                <p>{state.configurationMissing ? t("configurationHelp") : t("retryHelp")}</p>
               </AlertDescription>
             </div>
           </Alert>
@@ -87,33 +86,33 @@ export function ManageAccess() {
           <div className="flex items-center justify-between gap-4">
             <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <UserRound className="size-4" aria-hidden="true" />
-              你的账号
+              {t("account")}
             </span>
             <Badge variant={user ? "success" : "outline"}>
-              {state.loading ? "读取中" : user ? "已登录" : "未登录"}
+              {state.loading ? t("reading") : user ? t("signedIn") : t("signedOut")}
             </Badge>
           </div>
           <div className="space-y-3">
             <h3 id="account-title" className="break-words text-xl font-semibold tracking-tight">
-              {state.loading ? "正在读取账号…" : (user?.name ?? (user ? "欢迎回来" : "从登录开始"))}
+              {state.loading
+                ? t("readingAccount")
+                : (user?.name ?? (user ? t("welcome") : t("startWithSignIn")))}
             </h3>
             <p className="break-words text-sm leading-6 text-muted-foreground">
-              {user
-                ? (user.email ?? "你已登录，购买记录将保存在此账号下。")
-                : "使用 Google 或 GitHub 账号登录，无需设置新密码。"}
+              {user ? (user.email ?? t("signedInDescription")) : t("signInDescription")}
             </p>
           </div>
           <p className="text-sm leading-7 text-muted-foreground">
-            使用权限跟随账号保存。
+            {t("accountPersistence")}
             <br />
-            在其他设备登录同一个账号，也能继续使用已解锁的功能。
+            {t("otherDevices")}
           </p>
           <div className="mt-auto pt-2">
             {user ? (
               <form action="/api/auth/logout" method="post">
                 <Button type="submit" variant="outline" className="h-9">
                   <LogOut aria-hidden="true" />
-                  退出登录
+                  {t("signOut")}
                 </Button>
               </form>
             ) : state.loading || state.configurationMissing ? (
@@ -121,12 +120,12 @@ export function ManageAccess() {
                 {state.loading && (
                   <LoaderCircle className="motion-safe:animate-spin" aria-hidden="true" />
                 )}
-                {state.loading ? "读取账号中…" : "配置完成后即可登录"}
+                {state.loading ? t("readingAccountButton") : t("configurationLogin")}
               </Button>
             ) : (
               <Button asChild className="h-9">
                 <a href="/api/auth/login?destination=checkout">
-                  登录 / 创建账号
+                  {t("signIn")}
                   <ArrowRight aria-hidden="true" />
                 </a>
               </Button>
@@ -138,10 +137,10 @@ export function ManageAccess() {
           <div className="flex items-center justify-between gap-4">
             <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <LockKeyhole className="size-4" aria-hidden="true" />
-              访问权限
+              {t("access")}
             </span>
             <Badge variant={state.premium ? "success" : "outline"}>
-              {state.premium ? "已解锁" : "单次购买"}
+              {state.premium ? t("unlocked") : t("oneTime")}
             </Badge>
           </div>
           <div className="space-y-3">
@@ -149,9 +148,7 @@ export function ManageAccess() {
               Loom Pro
             </h3>
             <p className="text-sm leading-6 text-muted-foreground">
-              {state.premium
-                ? "使用权限已开通，返回工作区继续体验。"
-                : "完成一次测试付款，体验购买到解锁的完整流程。"}
+              {state.premium ? t("unlockedDescription") : t("purchaseDescription")}
             </p>
           </div>
           <ul className="space-y-3 text-sm text-muted-foreground">
@@ -166,10 +163,10 @@ export function ManageAccess() {
             {state.premium ? (
               <>
                 <Button asChild className="h-9 w-full">
-                  <a href={workspaceUrl}>
-                    返回 Loom 工作区
+                  <Link href={workspaceUrl}>
+                    {t("back")}
                     <ArrowRight aria-hidden="true" />
-                  </a>
+                  </Link>
                 </Button>
                 <Button
                   variant="ghost"
@@ -182,7 +179,7 @@ export function ManageAccess() {
                   ) : (
                     <CircleCheck aria-hidden="true" />
                   )}
-                  {state.action ? "检查中…" : "检查使用权限"}
+                  {state.action ? t("checking") : t("checkAccess")}
                 </Button>
               </>
             ) : (
@@ -192,13 +189,11 @@ export function ManageAccess() {
                 ) : (
                   <CreditCard aria-hidden="true" />
                 )}
-                {state.action ? "请稍候…" : user ? "前往测试收银台" : "登录并解锁"}
+                {state.action ? t("waiting") : user ? t("checkout") : t("signInAndUnlock")}
                 {!state.action && <ArrowRight aria-hidden="true" />}
               </Button>
             )}
-            <p className="text-xs leading-6 text-muted-foreground">
-              仅供测试体验，不会真实扣款。金额以收银台为准。
-            </p>
+            <p className="text-xs leading-6 text-muted-foreground">{t("paymentDisclaimer")}</p>
           </div>
         </section>
       </div>
