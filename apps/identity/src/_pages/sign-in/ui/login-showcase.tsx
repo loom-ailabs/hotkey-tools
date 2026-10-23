@@ -1,7 +1,14 @@
 "use client";
 
 import { useTranslations } from "@hotkey-tools/i18n";
-import { Button, Carousel, CarouselContent, CarouselItem, cn } from "@hotkey-tools/ui";
+import {
+  Button,
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  GlassSurface,
+  cn,
+} from "@hotkey-tools/ui";
 import { Layers3, ShieldCheck, Sparkles } from "lucide-react";
 import { useShowcase } from "../model/use-showcase";
 import { LoginArt } from "./login-art";
@@ -13,7 +20,7 @@ export function LoginShowcase() {
   const show = useShowcase();
   return (
     <aside className="hidden min-w-0 p-2 pl-0 lg:flex" aria-label={t("label")}>
-      <div className="flex flex-1 flex-col overflow-hidden rounded-xl border bg-card">
+      <GlassSurface className="flex flex-1 flex-col overflow-hidden">
         <div className="flex flex-1 items-center py-12">
           <Carousel
             opts={{ loop: true, duration: show.reducedMotion ? 0 : 30 }}
@@ -104,7 +111,7 @@ export function LoginShowcase() {
             {t("benefitControl")}
           </span>
         </footer>
-      </div>
+      </GlassSurface>
     </aside>
   );
 }

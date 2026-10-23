@@ -81,7 +81,7 @@ export function ManageAccess() {
         )}
       </div>
 
-      <div className="grid divide-y border-y md:grid-cols-2 md:divide-x md:divide-y-0">
+      <div className="loom-glass-strong grid divide-y rounded-xl px-6 md:grid-cols-2 md:divide-x md:divide-y-0">
         <section aria-labelledby="account-title" className="flex flex-col gap-6 py-8 md:pr-10">
           <div className="flex items-center justify-between gap-4">
             <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">

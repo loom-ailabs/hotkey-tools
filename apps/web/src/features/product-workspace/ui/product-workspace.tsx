@@ -3,7 +3,7 @@
 import { localizeUrl } from "@hotkey-tools/i18n/routing";
 
 import { useLocale, useTranslations } from "@hotkey-tools/i18n";
-import { Button, cn } from "@hotkey-tools/ui";
+import { Button, GlassSurface, cn } from "@hotkey-tools/ui";
 import {
   ArrowRight,
   Check,
@@ -31,7 +31,7 @@ export function ProductWorkspace({ access }: { access: Access }) {
         </div>
         <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("workBody")}</p>
       </div>
-      <div className="overflow-hidden rounded-xl border bg-surface shadow-2xl shadow-background/30">
+      <GlassSurface intensity="raised" className="overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b px-5 py-4 text-xs">
           <span className="flex items-center gap-2 font-medium">
             <Command className="size-4 text-link" /> {t("workName")}
@@ -153,7 +153,7 @@ export function ProductWorkspace({ access }: { access: Access }) {
             )}
           </div>
         </div>
-      </div>
+      </GlassSurface>
     </section>
   );
 }

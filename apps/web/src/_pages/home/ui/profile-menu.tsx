@@ -9,6 +9,7 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
+  GlassSurface,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -122,7 +123,7 @@ export function AccountProfile({ access }: { access: Access }) {
       <p className="mb-4 font-mono text-xs tracking-widest text-link">YOUR LOOM IDENTITY</p>
       <h2 className="text-3xl font-medium tracking-tight">{t("accountTitle")}</h2>
       <p className="mt-4 text-sm leading-7 text-muted-foreground">{t("accountBody")}</p>
-      <div className="mt-8 rounded-xl border bg-card p-6 sm:p-8" aria-busy={access.loading}>
+      <GlassSurface intensity="raised" className="mt-8 p-6 sm:p-8" aria-busy={access.loading}>
         {access.loading ? (
           <p role="status" className="text-muted-foreground">
             {t("loadingAccount")}
@@ -170,7 +171,7 @@ export function AccountProfile({ access }: { access: Access }) {
             {access.error}
           </p>
         )}
-      </div>
+      </GlassSurface>
       <Link
         href="/workspace"
         className="mt-6 inline-flex text-sm text-muted-foreground hover:text-foreground"

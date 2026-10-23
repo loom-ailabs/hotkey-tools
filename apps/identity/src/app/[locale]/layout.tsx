@@ -33,7 +33,11 @@ export default async function LocaleLayout({
   const initialTheme =
     theme === "light" || theme === "dark" || theme === "system" ? theme : undefined;
   return (
-    <html lang={languageTag(locale)} suppressHydrationWarning>
+    <html
+      lang={languageTag(locale)}
+      className={initialTheme === "system" ? undefined : (initialTheme ?? "dark")}
+      suppressHydrationWarning
+    >
       <body>
         <NextIntlClientProvider
           locale={locale}

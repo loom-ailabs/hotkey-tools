@@ -2,10 +2,9 @@
 
 import { ThemeProvider, useTheme } from "next-themes";
 import { useEffect, useState, type ReactNode } from "react";
+import { createAppearanceBootstrap, isAppearance, type Appearance } from "./appearance-bootstrap";
 
-export type Appearance = "light" | "dark" | "system";
-export const isAppearance = (value: unknown): value is Appearance =>
-  value === "light" || value === "dark" || value === "system";
+export { isAppearance, type Appearance } from "./appearance-bootstrap";
 
 function readPreference(): Appearance | undefined {
   const value = document.cookie
@@ -51,18 +50,29 @@ export function AppearanceProvider({
   initialTheme?: Appearance;
 }) {
   const [ready, setReady] = useState(false);
+  const safeInitialTheme = isAppearance(initialTheme) ? initialTheme : "dark";
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme={initialTheme}
-      forcedTheme={ready ? undefined : initialTheme}
-      storageKey="loom-appearance"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <PreferenceSync initialTheme={initialTheme} onReady={setReady} />
-      {children}
-    </ThemeProvider>
+    <>
+      <script
+        data-loom-theme-bootstrap=""
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: createAppearanceBootstrap(safeInitialTheme) }}
+      />
+      <ThemeProvider
+        attribute="class"
+        defaultTheme={safeInitialTheme}
+        forcedTheme={ready ? undefined : safeInitialTheme}
+        storageKey="loom-appearance"
+        enableSystem
+        disableTransitionOnChange
+        // Workers' keepNames helpers cannot survive next-themes' toString boundary.
+        // Its public runtime stays active; our literal script handles first paint.
+        scriptProps={{ type: "text/plain" }}
+      >
+        <PreferenceSync initialTheme={safeInitialTheme} onReady={setReady} />
+        {children}
+      </ThemeProvider>
+    </>
   );
 }
 export function useAppearance() {

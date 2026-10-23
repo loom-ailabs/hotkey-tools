@@ -19,7 +19,7 @@ export function SignInPage({ googleSignInUrl, githubSignInUrl, notice }: SignInP
   const { locale, switchLocale } = useLocaleSwitcher();
   const homeUrl = localizeUrl("https://www.loom-labs.ai/", locale);
   return (
-    <div className="grid min-h-svh bg-background lg:grid-cols-2">
+    <div className="loom-atmosphere grid min-h-svh bg-background lg:grid-cols-2">
       <div className="flex min-h-svh flex-col px-6 pb-6 pt-5 sm:px-10 lg:px-12">
         <header className="flex items-center justify-between gap-5">
           <a

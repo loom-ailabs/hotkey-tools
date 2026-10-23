@@ -11,7 +11,7 @@ export function IdentityPage() {
   const t = useTranslations("Access");
   const { locale, switchLocale } = useLocaleSwitcher();
   return (
-    <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-5 sm:px-8">
+    <div className="loom-atmosphere mx-auto flex min-h-screen max-w-5xl flex-col px-5 sm:px-8">
       <header className="flex h-20 items-center justify-between gap-4 border-b">
         <Link
           href={localizeUrl("https://www.loom-labs.ai/", locale)}

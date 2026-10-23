@@ -3,24 +3,20 @@
 import { localizeUrl } from "@hotkey-tools/i18n/routing";
 
 import Image from "next/image";
-import { Button } from "@hotkey-tools/ui";
+import { Button, GlassSurface } from "@hotkey-tools/ui";
 import { useLocale, useTranslations } from "@hotkey-tools/i18n";
 import { Link } from "@hotkey-tools/i18n/navigation";
 import {
   ArrowRight,
   ArrowUpRight,
   Box,
-  Braces,
   Check,
-  ChevronRight,
   Command,
-  Globe2,
   Layers3,
   Monitor,
-  Orbit,
   Sparkles,
 } from "lucide-react";
-import { IntelligenceOrbit } from "./intelligence-orbit";
+import { HeroBanner } from "./hero-banner";
 import { AccountMenu, AccountProfile } from "./profile-menu";
 import { ProductWorkspace, useProductAccess } from "@/features/product-workspace";
 
@@ -83,8 +79,8 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
     },
   ];
   return (
-    <div className="flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
-      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-lg">
+    <div className="loom-atmosphere flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
+      <header className="loom-glass-nav sticky top-0 z-30 border-x-0 border-t-0">
         <nav
           className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-5 sm:px-6 lg:px-10"
           aria-label={t("navLabel")}
@@ -135,68 +131,7 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
           </h1>
         )}
         {view === "account" && <AccountProfile access={access} />}
-        {view === "home" && (
-          <>
-            <section className="grid items-center gap-8 pt-16 pb-16 lg:grid-cols-5 lg:pt-24 lg:pb-24">
-              <div className="lg:col-span-3">
-                <div className="mb-7 inline-flex items-center gap-2 rounded-full border bg-surface px-3 py-1.5 text-xs text-muted-foreground">
-                  <span className="size-1.5 rounded-full bg-link" />
-                  {t("heroBadge")}
-                  <ChevronRight className="size-3" />
-                </div>
-                <h1 className="text-4xl leading-tight font-medium tracking-tight sm:text-6xl lg:text-7xl">
-                  {t("heroTitle")}
-                  <br />
-                  <span className="text-link">{t("heroAccent")}</span>
-                </h1>
-                <p className="mt-7 max-w-lg text-base leading-8 text-muted-foreground sm:text-lg">
-                  {t("heroBody")}
-                </p>
-                <div className="mt-9 flex flex-wrap items-center gap-4">
-                  <Button asChild size="lg">
-                    <Link href="/workspace">
-                      {t("explore")}
-                      <ArrowRight />
-                    </Link>
-                  </Button>
-                  <Link
-                    href="/vision"
-                    className="inline-flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-                  >
-                    {t("learnVision")}
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </div>
-                <p className="mt-6 font-mono text-xs tracking-wide text-muted-foreground">
-                  CONNECTING INTELLIGENCE. CRAFTING TOMORROW.
-                </p>
-              </div>
-              <div className="lg:col-span-2">
-                <IntelligenceOrbit />
-              </div>
-            </section>
-            <div className="flex flex-wrap items-center justify-between gap-5 border-y py-5 text-xs text-muted-foreground">
-              <p className="flex items-center gap-2">
-                <Orbit className="size-4 text-link" />
-                {t("flowLine")}
-              </p>
-              <div className="flex items-center gap-5 font-mono">
-                <span className="flex items-center gap-2">
-                  <Monitor className="size-3.5" />
-                  DESKTOP
-                </span>
-                <span className="flex items-center gap-2">
-                  <Globe2 className="size-3.5" />
-                  BROWSER
-                </span>
-                <span className="flex items-center gap-2">
-                  <Braces className="size-3.5" />
-                  EDITOR
-                </span>
-              </div>
-            </div>
-          </>
-        )}
+        {view === "home" && <HeroBanner />}
         {(view === "home" || view === "vision") && (
           <section className="pt-20 sm:pt-28">
             <p className="mb-4 font-mono text-xs tracking-widest text-link">
@@ -207,9 +142,9 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
               <br />
               <span className="text-muted-foreground">{t("visionAccent")}</span>
             </h2>
-            <div className="mt-12 grid gap-8 md:grid-cols-3 md:gap-0">
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
               {capabilities.map(({ number, icon: Icon, title, body, label }) => (
-                <article key={number} className="border-t pt-7 md:px-7 md:first:pl-0 md:last:pr-0">
+                <article key={number} className="loom-glass rounded-xl p-6 lg:p-7">
                   <div className="mb-6 flex items-center justify-between">
                     <Icon className="size-6 text-link" />
                     <span className="font-mono text-xs text-muted-foreground">{number}</span>
@@ -242,7 +177,7 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
                 </p>
                 <p className="mt-4 text-xs leading-6 text-muted-foreground">{t("sandboxNotice")}</p>
               </div>
-              <div className="rounded-xl border bg-surface p-7">
+              <GlassSurface className="flex flex-col p-7">
                 <Box className="size-5 text-muted-foreground" />
                 <h3 className="mt-5 text-lg font-medium">Loom Explore</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{t("exploreBody")}</p>
@@ -255,14 +190,17 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
                     </li>
                   ))}
                 </ul>
-                <Button asChild variant="outline" className="w-full">
+                <Button asChild variant="outline" className="mt-auto w-full">
                   <Link href="/workspace">
                     {t("startExploring")}
                     <ArrowRight />
                   </Link>
                 </Button>
-              </div>
-              <div className="relative rounded-xl border border-link/40 bg-surface p-7">
+              </GlassSurface>
+              <GlassSurface
+                intensity="raised"
+                className="relative flex flex-col border-link/40 p-7"
+              >
                 <div className="flex items-center justify-between">
                   <Command className="size-5 text-link" />
                   <span className="rounded border border-link/30 bg-primary/10 px-2 py-1 text-xs text-link">
@@ -282,7 +220,7 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
                     </li>
                   ))}
                 </ul>
-                <Button asChild className="w-full">
+                <Button asChild className="mt-auto w-full">
                   {premium ? (
                     <Link href="/workspace">
                       {t("openPro")}
@@ -295,12 +233,12 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
                     </a>
                   )}
                 </Button>
-              </div>
+              </GlassSurface>
             </div>
           </section>
         )}
         {view === "home" && (
-          <section className="border-t py-16 text-center sm:py-24">
+          <section className="loom-glass my-12 rounded-2xl px-6 py-16 text-center sm:my-16 sm:py-20">
             <p className="mb-5 font-mono text-xs tracking-widest text-link">
               THE NEXT THREAD STARTS WITH YOU
             </p>

@@ -10,7 +10,7 @@
 
 ## 视觉参考
 
-外部参考为 [Linear 官方首页](https://linear.app/) 与 2026-03-12 发布的 [A calmer interface for a product in motion](https://linear.app/now/behind-the-latest-design-refresh)。采用内容优先、降低导航视觉权重、柔和边框和低饱和底色的原则；首页以大字号、开放留白和多端连接轨道图传达科技感。界面、图形和文案为本项目实现，不复制 Linear 的品牌或产品内容。
+外部参考为 [Linear 官方首页](https://linear.app/) 与 2026-03-12 发布的 [A calmer interface for a product in motion](https://linear.app/now/behind-the-latest-design-refresh)。采用内容优先、降低导航视觉权重、柔和边框和低饱和底色的原则。当前首屏使用中央排版与原创数字编织场：数字字符、微点和短线在内容周围交织，细指针输入只牵引边缘图形，正文与主要操作仍由 HTML 输出。它表达连接与创造的愿景，不是实时任务或模型状态。导航、卡片与菜单采用统一磨砂玻璃材料，保留浅深主题、实色主要操作和可读性降级。调研取舍、实际文件和本轮验证见[视觉系统](visual-system.md)；界面、图形与文案不复制 Linear 或其他参考站点的品牌和付费实现。
 
 表单与购买页主要参考 loom-box 的 `apps/loom-desktop/docs/design-language.md` 和实际 `webview/src/shared/styles/theme.css`：连续工作区、轻分隔、系统字体、36px 控件、8px 控件圆角及12px工作区圆角。当前桌面深色基底为 `#181818`，raised 为 `#232323`，边框 `#353535`，文字 `#dfdfdf`，链接 `#8bbfff`。本仓库将这些角色集中在 `packages/ui/src/styles/globals.css` 的 `.dark`（兼容 `.loom-dark`）中，业务组件使用语义颜色和 Tailwind spacing utilities。
 

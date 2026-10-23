@@ -10,8 +10,7 @@ export const DropdownMenuGroup = Menu.Group;
 export const DropdownMenuRadioGroup = Menu.RadioGroup;
 export const DropdownMenuSub = Menu.Sub;
 
-const surface =
-  "z-50 min-w-40 overflow-hidden rounded-lg border bg-card p-1 text-card-foreground shadow-xl outline-none";
+const surface = "loom-glass-nav z-50 min-w-40 overflow-hidden rounded-lg p-1 outline-none";
 const item =
   "relative flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm outline-none select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0";
 

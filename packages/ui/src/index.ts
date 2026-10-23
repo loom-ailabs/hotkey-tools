@@ -11,6 +11,7 @@ export {
   CardTitle,
 } from "./components/card";
 export { cn } from "./lib/utils";
+export { GlassSurface, type GlassSurfaceProps } from "./components/glass-surface";
 export { Avatar, AvatarImage, AvatarFallback } from "./components/avatar";
 export * from "./components/dropdown-menu";
 export {
