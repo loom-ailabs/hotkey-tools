@@ -1,8 +1,8 @@
 import { defineRouting } from "next-intl/routing";
 
-export const locales = ["zh", "en"] as const;
+export const locales = ["en", "zh"] as const;
 export type Locale = (typeof locales)[number];
-export const defaultLocale: Locale = "zh";
+export const defaultLocale: Locale = "en";
 export const LOCALE_COOKIE = "LOOM_LOCALE";
 export const isLocale = (value: unknown): value is Locale => value === "zh" || value === "en";
 export const languageTag = (locale: Locale) => (locale === "zh" ? "zh-CN" : "en");
@@ -43,7 +43,7 @@ export function localizePath(value: string, locale: Locale): string {
   const path = stripLocale(queryAt === -1 ? noHash : noHash.slice(0, queryAt));
   const query = queryAt === -1 ? "" : noHash.slice(queryAt);
   if (path === "/api" || path.startsWith("/api/")) return `${path}${query}`;
-  return `${locale === "en" ? `/en${path === "/" ? "" : path}` : path}${query}`;
+  return `${locale === "zh" ? `/zh${path === "/" ? "" : path}` : path}${query}`;
 }
 
 export function localizeUrl(value: string, locale: Locale): string {

@@ -30,7 +30,7 @@ export function Link(props: ComponentProps<typeof navigation.Link>) {
 export function useLocaleSwitcher() {
   const current = useLocale();
   const pathname = useNextPathname();
-  const locale: Locale = isLocale(current) ? current : "zh";
+  const locale: Locale = isLocale(current) ? current : "en";
   function localeHref(next: Locale) {
     return localizePath(
       typeof window === "undefined"

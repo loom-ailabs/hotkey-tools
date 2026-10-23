@@ -50,7 +50,7 @@ export function getBillingConfig(env: Awaited<ReturnType<typeof getEnv>>): Billi
     throw new ApiError(503, "billing_not_configured", "Stripe Sandbox 尚未配置完整。");
   }
   if (!STRIPE_SECRET_KEY.startsWith("sk_test_") || !STRIPE_WEBHOOK_SECRET.startsWith("whsec_")) {
-    throw new ApiError(503, "sandbox_required", "此示例只接受 Stripe Sandbox 密钥。");
+    throw new ApiError(503, "sandbox_required", "当前仅接受 Stripe Sandbox 密钥。");
   }
   if (!STRIPE_PRICE_ID.startsWith("price_")) {
     throw new ApiError(503, "invalid_price_configuration", "请配置 Sandbox 中的单次固定价格。");
@@ -148,7 +148,7 @@ export class BillingService {
 
     if (!order) {
       if (await hasPremiumInDatabase(this.db, user.id)) {
-        throw new ApiError(409, "already_unlocked", "此账号已经解锁示例高级功能。");
+        throw new ApiError(409, "already_unlocked", "Loom Pro 已向此账号开放。");
       }
       const price = await this.stripe.prices.retrieve(this.config.priceId);
       if (

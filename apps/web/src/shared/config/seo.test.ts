@@ -3,7 +3,16 @@ import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import { GET as getLlmsIndex } from "@/app/llms.txt/route";
 import { GET as getLlmsFullText } from "@/app/llms-full.txt/route";
-import { createPageMetadata, PUBLIC_PAGES, serializeJsonLd, siteStructuredData } from "./seo";
+import { GET as getLocalizedIndex } from "@/app/[locale]/llms.txt/route";
+import { GET as getLocalizedFullText } from "@/app/[locale]/llms-full.txt/route";
+import {
+  createLlmsIndex,
+  createLlmsFullText,
+  createPageMetadata,
+  PUBLIC_PAGES,
+  serializeJsonLd,
+  siteStructuredData,
+} from "./seo";
 
 const publicUrls = [
   "https://www.loom-labs.ai/",
@@ -11,64 +20,102 @@ const publicUrls = [
   "https://www.loom-labs.ai/workspace",
   "https://www.loom-labs.ai/pricing",
 ];
+const chineseUrl = (url: string) =>
+  url === publicUrls[0]
+    ? "https://www.loom-labs.ai/zh"
+    : url.replace("https://www.loom-labs.ai", "https://www.loom-labs.ai/zh");
 
 describe("public search and agent discovery", () => {
-  it("limits the sitemap to canonical public pages without fabricated publication dates", () => {
+  it("lists English and Chinese canonical pages and excludes private account routes", () => {
     const entries = sitemap();
     expect(entries.map((entry) => entry.url)).toEqual(
-      publicUrls.flatMap((url) => [
-        url,
-        url === "https://www.loom-labs.ai/"
-          ? "https://www.loom-labs.ai/en"
-          : url.replace("https://www.loom-labs.ai", "https://www.loom-labs.ai/en"),
-      ]),
+      publicUrls.flatMap((url) => [url, chineseUrl(url)]),
     );
     expect(entries).toHaveLength(8);
     expect(entries.every((entry) => !entry.url.includes("/account"))).toBe(true);
-    for (const entry of entries) {
-      expect(entry.alternates?.languages).toHaveProperty("zh-CN");
-      expect(entry.alternates?.languages).toHaveProperty("en");
-      expect(entry.alternates?.languages).toHaveProperty("x-default");
+    for (const [index, entry] of entries.entries()) {
+      const english = publicUrls[Math.floor(index / 2)]!;
+      expect(entry.alternates?.languages).toEqual({
+        "zh-CN": chineseUrl(english),
+        en: english,
+        "x-default": english,
+      });
     }
     expect(entries.every((entry) => entry.lastModified === undefined)).toBe(true);
     expect(robots()).toMatchObject({
-      rules: { userAgent: "*", allow: "/" },
+      rules: {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/api/", "/account", "/zh/account", "/en/account"],
+      },
       sitemap: "https://www.loom-labs.ai/sitemap.xml",
     });
   });
 
-  it("gives each public route its own canonical and social identity regardless of request parameters", () => {
+  it("uses English default metadata and distinct Chinese canonicals with reciprocal hreflang", () => {
     const titles = new Set();
     for (const [index, page] of PUBLIC_PAGES.entries()) {
       const metadata = createPageMetadata(page.path);
-      expect(metadata.alternates?.canonical).toBe(publicUrls[index]);
-      expect(metadata.openGraph?.url).toBe(publicUrls[index]);
-      expect(metadata.alternates?.languages?.en).toContain("/en");
-      const english = createPageMetadata(page.path, "en");
-      expect(english.alternates?.canonical).toContain("/en");
-      expect(english.openGraph?.url).toBe(english.alternates?.canonical);
-      expect(english.description).not.toBe(metadata.description);
+      const english = publicUrls[index]!;
+      expect(metadata.alternates?.canonical).toBe(english);
+      expect(metadata.openGraph?.url).toBe(english);
+      expect(metadata.alternates?.languages).toEqual({
+        "zh-CN": chineseUrl(english),
+        en: english,
+        "x-default": english,
+      });
+      expect(createPageMetadata(page.path, "en")).toEqual(metadata);
+      const chinese = createPageMetadata(page.path, "zh");
+      expect(chinese.alternates?.canonical).toBe(chineseUrl(english));
+      expect(chinese.openGraph?.url).toBe(chinese.alternates?.canonical);
+      expect(chinese.description).not.toBe(metadata.description);
       titles.add(JSON.stringify(metadata.title));
     }
     expect(titles.size).toBe(4);
   });
 
-  it("serves cacheable plain text without exposing account or transaction endpoints", async () => {
-    for (const response of [getLlmsIndex(), getLlmsFullText()]) {
+  it("keeps root public text permanently English regardless of language preference", async () => {
+    const responses = [getLlmsIndex(), getLlmsFullText()];
+    const texts = [createLlmsIndex("en"), createLlmsFullText("en")];
+    for (const [index, response] of responses.entries()) {
       expect(response.status).toBe(200);
       expect(response.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
+      expect(response.headers.get("Content-Language")).toBe("en");
       expect(response.headers.get("Cache-Control")).toContain("public");
       const text = await response.text();
+      expect(text).toBe(texts[index]);
       for (const url of publicUrls) expect(text).toContain(url);
-      expect(text).toContain("Sandbox");
-      expect(text).toContain("预置");
       expect(text).not.toMatch(/https?:\/\/[^\s)]*\/api\//);
       expect(text).not.toMatch(/https?:\/\/(?:login|checkout|auth)\./);
       expect(text).not.toMatch(/(?:sk_test_|whsec_|Bearer |session_id=)/);
     }
   });
 
-  it("keeps JSON-LD inert and limits claims to the actual website and organization", () => {
+  it("serves Chinese text on /zh and preserves legacy /en text links without promoting aliases", async () => {
+    for (const get of [getLocalizedIndex, getLocalizedFullText]) {
+      const zh = await get(new Request("https://www.loom-labs.ai/zh/llms.txt"), {
+        params: Promise.resolve({ locale: "zh" }),
+      });
+      expect(zh.headers.get("Content-Language")).toBe("zh-CN");
+      expect(zh.headers.get("Link")).toContain("/zh/llms.txt");
+      expect(await zh.text()).toContain("https://www.loom-labs.ai/zh/workspace");
+      const en = await get(new Request("https://www.loom-labs.ai/en/llms.txt"), {
+        params: Promise.resolve({ locale: "en" }),
+      });
+      expect(en.headers.get("Content-Language")).toBe("en");
+      expect(en.headers.get("Link")).toBe('<https://www.loom-labs.ai/llms.txt>; rel="describedby"');
+      expect(await en.text()).not.toContain("https://www.loom-labs.ai/en/");
+      expect(
+        (
+          await get(new Request("https://www.loom-labs.ai/fr/llms.txt"), {
+            params: Promise.resolve({ locale: "fr" }),
+          })
+        ).status,
+      ).toBe(404);
+    }
+  });
+
+  it("keeps JSON-LD inert and limits claims to the website and organization", () => {
     const hostile = { description: "</script><script>alert('fixture')</script>" };
     expect(serializeJsonLd(hostile)).not.toContain("<");
     expect(JSON.parse(serializeJsonLd(hostile))).toEqual(hostile);
@@ -77,6 +124,8 @@ describe("public search and agent discovery", () => {
       "Organization",
       "WebSite",
     ]);
+    expect(structuredData["@graph"][1].inLanguage).toBe("en");
+    expect(structuredData["@graph"][1].url).toBe(publicUrls[0]);
     expect(JSON.stringify(structuredData)).not.toMatch(
       /Offer|AggregateRating|Review|priceCurrency/,
     );

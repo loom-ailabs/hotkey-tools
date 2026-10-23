@@ -1,12 +1,14 @@
 # Identity：账户与购买应用
 
-本应用将页面、登录回调、订单 API、Stripe Webhook 和付费鉴权放在同一个 Next.js App Router 服务中，通过 OpenNext 部署到一个 Cloudflare Worker。首版只提供一个产品的一次性购买示例：`hotkey-tools` / `premium-demo`；不包含订阅、用量计费或独立身份签发服务。
+本应用将页面、登录回调、订单 API、Stripe Webhook 和付费鉴权放在同一个 Next.js App Router 服务中，通过 OpenNext 部署到一个 Cloudflare Worker，提供 Loom 账号管理与一次性解锁工作计划的访问权限。数据库标识继续沿用 `hotkey-tools` / `premium-demo`，不改既有订单、幂等或权益归属；不包含订阅、用量计费或独立身份签发服务。
 
 Logto 负责认证和短期令牌刷新，D1 保存可撤销会话、用户、订单和权益，Stripe Sandbox 负责测试付款。付费权限由业务数据库判断，不依赖 Logto 的 RBAC 或自定义 API resources。开发租户可用功能不能代替生产 Free 套餐的验证。
 
 ## 中英文与外观
 
-登录与购买页面保留中文根路径，并提供英文 `/en`；界面使用共享浅色、深色、跟随系统与语言偏好。登录页展示产品轮播，购买页沿用现有订单与权益逻辑。生产 `LOOM_LOCALE`、`LOOM_THEME` 只保存非敏感偏好，与 HttpOnly 随机会话标识分开；identity 所有语言页面仍禁止索引。
+登录与购买页面默认英文根路径，中文使用 `/zh`；旧 `/en` 页面保留原始 query 并规范跳转到英文根路径。登录操作区居中，右侧产品愿景轮播默认自动播放，可视控制只保留分页点，键盘聚焦可操作暂停/播放，并遵循减少动态效果设置。购买页使用账号、访问权限和一次性解锁等正式措辞，购买位置明确显示测试支付、不真实扣款；工作计划仍为主站人工整理的静态内容。
+
+界面使用共享浅色、深色、跟随系统与语言偏好，购买页沿用现有订单与权益逻辑。生产 `LOOM_LOCALE`、`LOOM_THEME` 只保存非敏感偏好，与 HttpOnly 随机会话标识分开；identity 所有语言页面仍禁止索引。
 
 `/api/auth/login`、callback、订单与 Stripe Webhook 保持原端点，不带语言前缀。有效语言偏好只通过官方 SDK 的固定 `ui_locales=zh-CN|en` 影响托管登录界面，不改变身份验证或返回地址校验。消息和布局接线见[国际化说明](../../docs/internationalization.md)；主站头像菜单和个人信息页由 `apps/web` 承载。
 
@@ -79,7 +81,7 @@ Wrangler CLI 由 mise 安装并固定版本；OpenNext 的 Node API 与运行时
 
 ### 自定义域名与原用户归属
 
-当前公开配置如下。login 与 checkout 已出现在 Worker Custom Domains 列表；auth 是已就绪的 Logto 自定义域名。新域名版本已发布，GitHub 两种固定返回、付款开通及退出重登持权已实际通过，新域全额退款已撤权。Google 依用户选择保持未关联，应用回调与 www 返回未验。
+当前公开配置如下。login 与 checkout 绑定本 Worker，auth 是已就绪的 Logto 自定义域名。GitHub 返回、付款开通、退出重登持权及全额退款撤权已有历史验收；本轮 GitHub 与 Google 均已真实完成中央回调并进入 WWW。
 
 ```dotenv
 APP_URL=https://checkout.loom-labs.ai
@@ -116,7 +118,9 @@ Google 的测试受众需要包含实际测试账号；所需设置以该 OAuth 
 
 Logto 开发/生产租户由用户预先创建，本次仅配置开发租户，生产租户未改动。Google OAuth 测试受众中本次新增 1 名自用账号，Google/GitHub 演示连接器均已替换为专用配置；GitHub 已在新旧入口完成真实登录。
 
-Google 官方基本资料授权成功，并返回 auth 域 connector 回调，随后到达 Logto 同邮箱账号的显式关联页。依用户选择保持未关联，未验证应用回调及 www 返回。本次不继续关联，也不凭邮箱自动合并账号；未来可使用未占用邮箱的 Google 身份，或另行明确关联后补验。
+早期 Google 测试曾到达同邮箱账号的显式关联页，并按用户选择停止该分支。本轮 Google 已从官方账号选择、Logto 回调进入 WWW，应用识别为此前同一身份；Logto 用户设置的只读检查显示已有 GitHub 与 Google 连接。本轮未执行关联、合并或连接编辑，不能据此声称本轮创建了连接，也不以邮箱自动合并账号。 Google 登录后三域均识别同一用户且 premium=false，随后统一退出后三域匿名；再次 GitHub 登录已返回 WWW 根路径。
+
+托管页面已在开发租户保存浅深主色、Dark mode 与 [Custom CSS](../../docs/logto-branding.css)；真实 GitHub 回调已观察到内联 CSS 和 Loom 加载装饰。原生 Company logo/Favicon 字段本轮未配置，开发环境提示与 Powered by Logto 保留。配置范围和回滚见[Logto 品牌配置](../../docs/logto-branding.md)。
 
 开发租户包含开发标识和用户数据保留限制，不作为生产用户库。正式上线应单独核实套餐、配额和迁移安排。参考 [Logto 租户说明](https://docs.logto.io/logto-cloud/tenant-settings)。
 
@@ -181,7 +185,9 @@ mise identity preview
 
 中央登录预览为 `http://localhost:3001`，WWW 为 `http://localhost:3000`。两应用本地使用相同 Cookie key 和 localhost（Domain 留空），统一 LOGIN_URL=localhost:3001、AUTH_SUCCESS_URL=localhost:3000。预览清空生产 routes，不放宽正式准确 Origin 检查；真实本地 OAuth 需登记中央 localhost:3001 回调。
 
-本轮 D1 会话与自动刷新已部署：identity 为 `9e04b462-53e1-4660-8636-3c13139b00cc`，WWW 为 `3b1091f9-a959-4352-91ac-54b6f0731811`，`0002_sessions.sql` 已应用。core 239、identity 137、WWW 24，共 400 项测试通过；core 覆盖率为 statements 98.17%、branches 95.47%、functions 100%、lines 98.75%。全仓验证、实际 Workerd 协议检查、线上匿名 53/53，以及真实 GitHub 三域共享登录、有效会话直接返回、官方 SDK 刷新和共享退出均已通过。受控缩短本轮测试会话截止时间后，三域拒绝继续认证且 D1 撤销清密文，随后 GitHub 重登恢复同一身份；不将此称为真实等待 14 天。本地 Workerd 9 组最终复跑通过。证据及最新边界见[会话生命周期](../../docs/session-lifecycle.md)。
+本轮英文默认、正式产品文案、居中登录、默认自动轮播和菜单图标已发布。全仓 `mise run verify` 返回 0；identity-core 263、identity 149、web 32、i18n 10，共 454 项测试通过，旧 Worker 4 项另计。本地真实 Workerd 共享会话 9/9、本地 HTTP 67/67、线上独立 HTTP 67/67 通过。当前 identity 版本 `17aeae33-1ab4-450e-af1e-074e7a690576`、WWW 版本 `a39d3bf2-e75b-492c-9af7-fe3cb14ac9a0` 均已读回为 100% 流量；GitHub 完整返回 `/workspace?source=login-polish&keep=a%2Bb`，Google 也已完成真实应用回调并进入 WWW。以下版本与测试保留为历史。
+
+此前 D1 会话认证 checkpoint：identity 为 `9e04b462-53e1-4660-8636-3c13139b00cc`，WWW 为 `3b1091f9-a959-4352-91ac-54b6f0731811`，`0002_sessions.sql` 已应用。当时 core 239、identity 137、WWW 24，共 400 项测试通过；core 覆盖率为 statements 98.17%、branches 95.47%、functions 100%、lines 98.75%。真实 GitHub 三域共享登录、官方 SDK 刷新、共享退出及受控绝对到期拒绝已验证；不将此称为真实等待 14 天。本地 Workerd 9 组通过。该会话机制继续沿用，证据见[会话生命周期](../../docs/session-lifecycle.md)。
 
 以下是 2026-10-23 上一版自包含父域 Cookie 的真实记录：登录与购买 Worker 为 `a4224f5a-c2f1-427f-87c5-2fb94f03cce2`，WWW 为 `c7fbf7c8-c45a-45e5-b6d2-7ae7c15a0b85`。全仓验证、本地 Workerd 和 60 项线上匿名检查通过；真实 GitHub 三域共享登录、有效会话返回原产品、共享退出、USD 1.00 Sandbox 付款后主站运行、退出重登持权，以及全额退款后原会话拒绝访问均已完成。最终有效权益为 0；旧有两项 pending 购买意图未改动。浏览器和订单证据分别为 `shared-domain-browser-e2e.json` 与 `shared-domain-billing.json`，完整步骤与对象清单见[飞书操作记录](https://bytedance.larkoffice.com/docx/O5IUdAY2bon0L1x72gucn73NnOh)。
 
@@ -189,7 +195,7 @@ mise identity preview
 
 旧 workers.dev 入口已完成 GitHub 登录、Sandbox 付款、重登持权及全额退款撤权，证据位于 `.codex-artifacts/identity/browser-e2e.json` 和 `cloud-e2e-billing.json`。
 
-新域名已验证 GitHub 的 website/checkout 两种返回、USD 1.00 付款开通、退出重登持权，以及成功全额退款后的 D1 撤权和高级接口拒绝；D1 用户数保持为 1。证据位于 `custom-domain-browser-e2e.json` 与 `custom-domain-billing.json`。Google 仅验证至显式关联页，按用户选择未关联，应用回调及 www 返回未验。
+早期新域名版本已验证 GitHub 的 website/checkout 两种返回、USD 1.00 付款开通、退出重登持权，以及成功全额退款后的 D1 撤权和高级接口拒绝；当时 D1 用户数保持为 1。证据位于 `custom-domain-browser-e2e.json` 与 `custom-domain-billing.json`。该阶段的 Google 只验证至显式关联页；本轮已完成的 Google 应用回调结果见上文。
 
 适配 Logto SDK 时，Next.js 构建曾选择 jose 的 Node 导出，导致本次 Workerd 环境的 ES384 验签不兼容。现将直接依赖固定为 `jose@5.10.0`，开发与构建显式使用 webpack，并将精确的 `jose$` alias 指向该库官方 WebCrypto 导出；SDK 的签名、issuer 和 audience 校验保持启用。`scripts/check-jose-runtime.mjs` 已在 Workerd 验证合法 ES384 签名、篡改签名、错误 issuer、错误 audience 四项行为。该修复针对本次依赖与构建路径，不表示 Cloudflare 全面不支持 Node crypto。
 

@@ -2,8 +2,7 @@
   "homeLabel": "Loom AI 首页",
   "eyebrow": "LOOM 账号",
   "title": "你的账号与访问权限。",
-  "description": "管理 Loom 账号，体验从购买到解锁的完整流程。",
-  "sandboxDescription": "当前为测试环境，不会产生真实扣款。",
+  "description": "管理你的 Loom 账号和功能访问权限。",
   "security": "安全登录 · 托管收银台 · 使用权限随账号保存",
   "back": "返回 Loom 工作区",
   "settings": "偏好设置",
@@ -37,14 +36,14 @@
   "access": "访问权限",
   "unlocked": "已解锁",
   "oneTime": "单次购买",
-  "unlockedDescription": "使用权限已开通，返回工作区继续体验。",
-  "purchaseDescription": "完成一次测试付款，体验购买到解锁的完整流程。",
+  "unlockedDescription": "Loom Pro 已解锁，返回工作区查看工作计划。",
+  "purchaseDescription": "一次性解锁 Loom Pro，查看工作计划。",
   "checking": "检查中…",
   "checkAccess": "检查使用权限",
   "waiting": "请稍候…",
-  "checkout": "前往测试收银台",
+  "checkout": "前往收银台",
   "signInAndUnlock": "登录并解锁",
-  "paymentDisclaimer": "仅供测试体验，不会真实扣款。金额以收银台为准。",
+  "paymentDisclaimer": "测试支付 · 不会真实扣款。测试金额以收银台为准。",
   "benefits": {
     "account": "购买记录关联当前账号",
     "confirmation": "付款确认后自动开通",
@@ -57,7 +56,7 @@
     "confirming": "正在确认付款结果，请稍候…",
     "pending": "付款结果仍在处理中，可点击刷新状态重新查询。关闭页面不会影响到账确认。",
     "alreadyPaid": "这笔订单已付款，功能已解锁。",
-    "premiumVerified": "权限验证通过，可以使用高级功能。"
+    "premiumVerified": "Loom Pro 访问权限已开通。"
   },
   "errors": {
     "profile": "无法读取登录状态，请刷新状态重试。",

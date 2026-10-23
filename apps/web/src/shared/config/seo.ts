@@ -4,12 +4,12 @@ import { languageTag, localizePath, type Locale } from "@hotkey-tools/i18n/routi
 
 export const SITE_URL = "https://www.loom-labs.ai";
 export const SITE_NAME = "Loom AI";
-export const SITE_DESCRIPTION = getSeoMessages("zh").description;
+export const SITE_DESCRIPTION = getSeoMessages("en").description;
 export const BRAND_IMAGE = {
   url: `${SITE_URL}/loom.png`,
   width: 1254,
   height: 1254,
-  alt: getSeoMessages("zh").brandImageAlt,
+  alt: getSeoMessages("en").brandImageAlt,
 };
 const pages = [
   { path: "/", key: "home" },
@@ -22,11 +22,11 @@ export function publicPagesForLocale(locale: Locale) {
   const messages = getSeoMessages(locale);
   return pages.map((page) => ({ path: page.path, ...messages.pages[page.key] }));
 }
-export const PUBLIC_PAGES = publicPagesForLocale("zh");
-export function publicPageUrl(path: PublicPath, locale: Locale = "zh"): string {
+export const PUBLIC_PAGES = publicPagesForLocale("en");
+export function publicPageUrl(path: PublicPath, locale: Locale = "en"): string {
   return new URL(localizePath(path, locale), SITE_URL).href;
 }
-export function createPageMetadata(path: PublicPath, locale: Locale = "zh"): Metadata {
+export function createPageMetadata(path: PublicPath, locale: Locale = "en"): Metadata {
   const page = publicPagesForLocale(locale).find((candidate) => candidate.path === path)!;
   const url = publicPageUrl(path, locale);
   return {
@@ -37,7 +37,7 @@ export function createPageMetadata(path: PublicPath, locale: Locale = "zh"): Met
       languages: {
         "zh-CN": publicPageUrl(path, "zh"),
         en: publicPageUrl(path, "en"),
-        "x-default": publicPageUrl(path, "zh"),
+        "x-default": publicPageUrl(path, "en"),
       },
     },
     openGraph: {
@@ -85,7 +85,7 @@ export function createSiteStructuredData(locale: Locale) {
     ],
   };
 }
-export const siteStructuredData = createSiteStructuredData("zh");
+export const siteStructuredData = createSiteStructuredData("en");
 export function serializeJsonLd(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
@@ -110,8 +110,8 @@ export function createLlmsFullText(locale: Locale) {
     )
     .join("\n\n")}\n`;
 }
-export const llmsIndex = createLlmsIndex("zh");
-export const llmsFullText = createLlmsFullText("zh");
+export const llmsIndex = createLlmsIndex("en");
+export const llmsFullText = createLlmsFullText("en");
 export const publicTextHeaders = {
   "Content-Type": "text/plain; charset=utf-8",
   "Cache-Control": "public, max-age=3600, s-maxage=86400",

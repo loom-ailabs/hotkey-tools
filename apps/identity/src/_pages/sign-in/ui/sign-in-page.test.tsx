@@ -29,8 +29,10 @@ describe("login page composition", () => {
       expect(markup).toContain(messages.login.title);
       expect(markup).toContain(messages.login.google);
       expect(markup).toContain(messages.login.github);
-      expect(markup).toContain(messages.carousel.preview);
-      expect(markup).toContain(`href="https://www.loom-labs.ai/${locale === "en" ? "en" : ""}"`);
+      expect(markup).toMatch(/<section[^>]+class="[^"]*text-center/);
+      expect(markup).not.toMatch(/产品愿景 · 视觉示意|Product vision · visual preview/);
+      expect(markup).not.toMatch(/aria-label="(上一项|下一项|Previous item|Next item)"/);
+      expect(markup).toContain(`href="https://www.loom-labs.ai/${locale === "zh" ? "zh" : ""}"`);
       expect(markup).toContain(`href="${google.replaceAll("&", "&amp;")}"`);
       expect(markup).toContain(`href="${github.replaceAll("&", "&amp;")}"`);
       expect(markup).not.toContain('href="#');

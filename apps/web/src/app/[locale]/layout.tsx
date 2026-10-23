@@ -12,6 +12,7 @@ import {
   serializeJsonLd,
   createSiteStructuredData,
 } from "@/shared/config/seo";
+import { ProductAccessProvider } from "@/features/product-workspace";
 import "../globals.css";
 
 export async function generateMetadata({
@@ -49,7 +50,7 @@ export default async function LocaleLayout({
         <link
           rel="describedby"
           type="text/plain"
-          href={locale === "en" ? "/en/llms.txt" : "/llms.txt"}
+          href={locale === "zh" ? "/zh/llms.txt" : "/llms.txt"}
         />
       </head>
       <body>
@@ -62,7 +63,9 @@ export default async function LocaleLayout({
           messages={await getMessagesForLocale(locale)}
           timeZone="UTC"
         >
-          <AppearanceProvider initialTheme={initialTheme}>{children}</AppearanceProvider>
+          <AppearanceProvider initialTheme={initialTheme}>
+            <ProductAccessProvider>{children}</ProductAccessProvider>
+          </AppearanceProvider>
         </NextIntlClientProvider>
       </body>
     </html>

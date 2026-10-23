@@ -1,5 +1,7 @@
 "use client";
 
+import { localizeUrl } from "@hotkey-tools/i18n/routing";
+
 import { useLocale, useTranslations } from "@hotkey-tools/i18n";
 import { Button, cn } from "@hotkey-tools/ui";
 import {
@@ -7,7 +9,6 @@ import {
   Check,
   CircleDot,
   Command,
-  CornerDownLeft,
   FileText,
   LockKeyhole,
   LogOut,
@@ -37,7 +38,7 @@ export function ProductWorkspace({ access }: { access: Access }) {
           </span>
           <span className="flex items-center gap-2 text-muted-foreground">
             <span className="size-1.5 rounded-full bg-link" />
-            {t("interactiveDemo")}
+            {t("workspaceLabel")}
           </span>
         </div>
         <div className="grid md:grid-cols-4">
@@ -49,7 +50,7 @@ export function ProductWorkspace({ access }: { access: Access }) {
             </div>
             <div className="mt-2 flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
               <FileText className="size-4" />
-              {t("samplePlan")}
+              {t("planTitle")}
             </div>
             <div className="mt-24 border-t px-3 pt-4 text-xs leading-6 text-muted-foreground">
               Connecting intelligence.
@@ -61,13 +62,11 @@ export function ProductWorkspace({ access }: { access: Access }) {
             <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CircleDot className="size-3.5 text-link" />
-                {access.loading
-                  ? t("loadingAccount")
-                  : premium
-                    ? t("proUnlocked")
-                    : access.profile?.user
-                      ? t("signedInFree")
-                      : t("guestFree")}
+                {premium
+                  ? t("proUnlocked")
+                  : access.profile?.user
+                    ? t("signedInFree")
+                    : t("guestFree")}
               </div>
               <div className="flex items-center gap-3">
                 {access.profile?.user && (
@@ -83,13 +82,13 @@ export function ProductWorkspace({ access }: { access: Access }) {
                 )}
                 <button
                   className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
-                  disabled={access.loading}
+                  disabled={access.loading || access.refreshing}
                   onClick={() => void access.refresh()}
                 >
                   <RefreshCw
                     className={cn(
                       "size-3",
-                      access.loading && "animate-spin motion-reduce:animate-none",
+                      access.refreshing && "animate-spin motion-reduce:animate-none",
                     )}
                   />
                   {t("refreshAccess")}
@@ -99,10 +98,9 @@ export function ProductWorkspace({ access }: { access: Access }) {
             <h3 className="text-xl font-medium">{t("ideaTitle")}</h3>
             <p className="mt-3 text-sm leading-7 text-muted-foreground">{t("ideaBody")}</p>
             <div className="mt-6 rounded-lg border bg-background p-4 text-sm leading-7 text-foreground/80">
-              {t("samplePrompt")}
+              {t("planDescription")}
               <div className="mt-3 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-                <span>{t("sampleDisclaimer")}</span>
-                <CornerDownLeft className="size-3.5" />
+                <span>{t("planCategory")}</span>
               </div>
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -112,7 +110,7 @@ export function ProductWorkspace({ access }: { access: Access }) {
                   onClick={() => void access.run()}
                 >
                   <Sparkles />
-                  {access.running ? t("checkingAccess") : t("runPro")}
+                  {access.running ? t("checkingAccess") : t("openPlan")}
                   <ArrowRight />
                 </Button>
               ) : (
@@ -120,7 +118,7 @@ export function ProductWorkspace({ access }: { access: Access }) {
                   <a
                     href={
                       access.profile?.user
-                        ? `https://checkout.loom-labs.ai${locale === "en" ? "/en" : "/"}`
+                        ? localizeUrl("https://checkout.loom-labs.ai/", locale)
                         : access.loginUrl
                     }
                   >
@@ -141,9 +139,7 @@ export function ProductWorkspace({ access }: { access: Access }) {
             )}
             {access.unlocked && (
               <div className="mt-6 border-t pt-6" role="status">
-                <p className="mb-4 text-xs font-medium text-link">
-                  权限验证通过 · 预置{t("samplePlan")}
-                </p>
+                <p className="mb-4 text-xs font-medium text-link">{t("accessVerified")}</p>
                 <ol className="space-y-3">
                   {[t("step1"), t("step2"), t("step3")].map((step) => (
                     <li key={step} className="flex gap-3 text-sm leading-6">
@@ -152,7 +148,7 @@ export function ProductWorkspace({ access }: { access: Access }) {
                     </li>
                   ))}
                 </ol>
-                <p className="mt-4 text-xs leading-6 text-muted-foreground">{t("sampleLimits")}</p>
+                <p className="mt-4 text-xs leading-6 text-muted-foreground">{t("planGuidance")}</p>
               </div>
             )}
           </div>

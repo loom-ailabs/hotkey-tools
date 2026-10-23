@@ -7,7 +7,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ loc
     headers: {
       ...publicTextHeaders,
       "Content-Language": locale === "en" ? "en" : "zh-CN",
-      Link: `<${SITE_URL}${locale === "en" ? "/en" : ""}/llms.txt>; rel="describedby"`,
+      Link: `<${SITE_URL}${locale === "zh" ? "/zh" : ""}/llms.txt>; rel="describedby"`,
     },
   });
 }

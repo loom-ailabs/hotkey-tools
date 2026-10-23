@@ -16,15 +16,38 @@ async function api(path, status) {
   return body;
 }
 
-for (const path of ["/", "/vision", "/pricing", "/workspace"]) {
-  for (let visit = 0; visit < 2; visit++) {
-    const page = await fetch(new URL(path, baseUrl));
-    assert.equal(page.status, 200);
-    const html = await page.text();
-    assert.match(html, /Loom/);
-    assert.ok(!/<a\b[^>]*\bhref=["'][^"']*#/i.test(html), "Product links must not use hash routes");
+for (const [locale, prefix] of [
+  ["en", ""],
+  ["zh", "/zh"],
+]) {
+  for (const pagePath of ["/", "/vision", "/pricing", "/workspace"]) {
+    const path = `${prefix}${pagePath === "/" && prefix ? "" : pagePath}`;
+    for (let visit = 0; visit < 2; visit++) {
+      const page = await fetch(new URL(path, baseUrl));
+      assert.equal(page.status, 200);
+      const html = await page.text();
+      assert.match(html, /Loom/);
+      assert.ok(html.includes(`lang="${locale === "en" ? "en" : "zh-CN"}"`));
+      assert.ok(
+        !/<a\b[^>]*\bhref=["'][^"']*#/i.test(html),
+        "Product links must not use hash routes",
+      );
+    }
+    checks.push({ path, locale, status: 200, directAndRefresh: true });
   }
-  checks.push({ path, status: 200, directAndRefresh: true });
+}
+const legacy = await fetch(new URL("/en/workspace?source=legacy&keep=a%2Bb", baseUrl), {
+  redirect: "manual",
+});
+assert.equal(legacy.status, 307);
+assert.equal(new URL(legacy.headers.get("location")).pathname, "/workspace");
+assert.equal(new URL(legacy.headers.get("location")).search, "?source=legacy&keep=a%2Bb");
+checks.push({ path: "/en/workspace", status: 307, rawQueryPreserved: true });
+for (const prefix of ["/en", "/zh"]) {
+  const response = await fetch(new URL(`${prefix}/api/me`, baseUrl), { redirect: "manual" });
+  assert.equal(response.status, 404);
+  assert.equal(response.headers.has("location"), false);
+  checks.push({ path: `${prefix}/api/me`, status: 404 });
 }
 const centralPage = await fetch(loginBase);
 assert.equal(centralPage.status, 200);
@@ -87,6 +110,7 @@ for (const provider of ["google", "github"]) {
     new URL("/api/auth/callback", loginBase).toString(),
   );
   assert.equal(target.searchParams.get("direct_sign_in"), `social:${provider}`);
+  assert.equal(target.searchParams.get("ui_locales"), "en");
   const cookie = response.headers.get("set-cookie") ?? "";
   assert.ok(/HttpOnly/i.test(cookie), "Shared cookie must be HttpOnly");
   assert.ok(/SameSite=Lax/i.test(cookie), "Shared cookie must be Lax");

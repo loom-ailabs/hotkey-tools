@@ -27,8 +27,10 @@ function fakeCarousel() {
       active = (active + 1) % 3;
       events.get("select")?.forEach((run) => run());
     }),
-    scrollPrev: vi.fn(),
-    scrollTo: vi.fn(),
+    scrollTo: vi.fn((index: number) => {
+      active = index;
+      events.get("select")?.forEach((run) => run());
+    }),
   };
   return {
     api: api as unknown as NonNullable<CarouselApi>,
@@ -64,7 +66,7 @@ afterEach(() => {
 });
 
 describe("accessible login showcase rotation", () => {
-  it("rotates on desktop, pauses on hover, and stops until explicitly restarted after interaction", () => {
+  it("rotates by default and naturally resumes after pointer pagination and hover", () => {
     const carousel = fakeCarousel();
     const { result } = renderHook(() => useShowcase());
     act(() => result.current.setApi(carousel.api));
@@ -74,15 +76,26 @@ describe("accessible login showcase rotation", () => {
     act(() => result.current.hover(true));
     act(() => vi.advanceTimersByTime(14_000));
     expect(carousel.calls.scrollNext).toHaveBeenCalledTimes(1);
-    act(() => {
-      result.current.hover(false);
-      result.current.pause();
-    });
-    act(() => vi.advanceTimersByTime(14_000));
-    expect(result.current.rotating).toBe(false);
-    act(() => result.current.toggle());
+    act(() => result.current.select(2));
+    expect(carousel.calls.scrollTo).toHaveBeenCalledWith(2, false);
+    expect(result.current.playing).toBe(true);
+    act(() => result.current.hover(false));
     act(() => vi.advanceTimersByTime(7_000));
     expect(carousel.calls.scrollNext).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps keyboard-focus or explicit pause until rotation is explicitly restarted", () => {
+    const carousel = fakeCarousel();
+    const { result } = renderHook(() => useShowcase());
+    act(() => result.current.setApi(carousel.api));
+    act(() => result.current.pause());
+    act(() => result.current.select(2));
+    act(() => vi.advanceTimersByTime(14_000));
+    expect(result.current.rotating).toBe(false);
+    expect(carousel.calls.scrollNext).not.toHaveBeenCalled();
+    act(() => result.current.toggle());
+    act(() => vi.advanceTimersByTime(7_000));
+    expect(carousel.calls.scrollNext).toHaveBeenCalledTimes(1);
   });
 
   it("respects reduced motion immediately and uses nonanimated manual navigation", () => {
@@ -92,19 +105,18 @@ describe("accessible login showcase rotation", () => {
     act(() => result.current.setApi(carousel.api));
     act(() => vi.advanceTimersByTime(21_000));
     expect(carousel.calls.scrollNext).not.toHaveBeenCalled();
-    act(() => {
-      result.current.select(2);
-      result.current.previous();
-      result.current.next();
-    });
+    act(() => result.current.select(2));
     expect(carousel.calls.scrollTo).toHaveBeenCalledWith(2, true);
-    expect(carousel.calls.scrollPrev).toHaveBeenCalledWith(true);
-    expect(carousel.calls.scrollNext).toHaveBeenCalledWith(true);
+    act(() => result.current.toggle());
+    act(() => result.current.toggle());
+    act(() => vi.advanceTimersByTime(14_000));
+    expect(result.current.rotating).toBe(false);
+    expect(carousel.calls.scrollNext).not.toHaveBeenCalled();
     act(() => {
       reduced = false;
       mediaListeners.forEach((listener) => listener());
     });
-    expect(result.current.playing).toBe(false);
+    expect(result.current.rotating).toBe(true);
   });
 
   it("does not run in the hidden mobile panel or background document and cleans up on unmount", () => {
@@ -130,13 +142,23 @@ describe("accessible login showcase rotation", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("stops automatic rotation when the user starts a swipe", () => {
+  it("pauses during a swipe, then resumes without overriding an explicit pause", () => {
     const carousel = fakeCarousel();
     const { result } = renderHook(() => useShowcase());
     act(() => result.current.setApi(carousel.api));
     act(() => carousel.emit("pointerDown"));
-    expect(result.current.playing).toBe(false);
+    expect(result.current.rotating).toBe(false);
     act(() => vi.advanceTimersByTime(14_000));
     expect(carousel.calls.scrollNext).not.toHaveBeenCalled();
+    act(() => carousel.emit("pointerUp"));
+    act(() => vi.advanceTimersByTime(7_000));
+    expect(carousel.calls.scrollNext).toHaveBeenCalledTimes(1);
+    act(() => {
+      carousel.emit("pointerDown");
+      result.current.pause();
+      carousel.emit("pointerUp");
+    });
+    act(() => vi.advanceTimersByTime(14_000));
+    expect(carousel.calls.scrollNext).toHaveBeenCalledTimes(1);
   });
 });

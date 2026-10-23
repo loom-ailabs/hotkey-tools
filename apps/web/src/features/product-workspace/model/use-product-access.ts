@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "@hotkey-tools/i18n";
 
 export type ProductProfile = {
@@ -26,58 +36,76 @@ async function readApi<T>(path: string): Promise<T> {
   return body.data as T;
 }
 
-export function useProductAccess() {
+function useProductAccessState() {
   const t = useTranslations("Web");
+  const pathname = usePathname();
+  const query = useSearchParams().toString();
   const [profile, setProfile] = useState<ProductProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [running, setRunning] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState("");
   const [loginUrl, setLoginUrl] = useState("/api/auth/login");
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const initialLoadStarted = useRef(false);
+  const requestRevision = useRef(0);
+  const loadProfile = useCallback(async () => {
+    const revision = ++requestRevision.current;
     try {
       const next = await readApi<ProductProfile>("/api/me");
-      setProfile(next);
-      if (!next.entitlements.premium) setUnlocked(false);
-      setError("");
+      if (revision === requestRevision.current) {
+        setProfile(next);
+        if (!next.entitlements.premium) setUnlocked(false);
+        setError("");
+      }
     } catch (cause) {
-      setProfile(null);
-      setUnlocked(false);
-      setError(
-        cause instanceof AccessError && cause.type === "session_busy"
-          ? t("errorBusy")
-          : t("errorAccount"),
-      );
+      if (revision === requestRevision.current) {
+        setProfile(null);
+        setUnlocked(false);
+        setError(
+          cause instanceof AccessError && cause.type === "session_busy"
+            ? t("errorBusy")
+            : t("errorAccount"),
+        );
+      }
     } finally {
       setLoading(false);
     }
+    return revision;
   }, [t]);
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadProfile();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadProfile]);
+  useEffect(() => {
+    if (initialLoadStarted.current) return;
+    initialLoadStarted.current = true;
+    void loadProfile();
+  }, [loadProfile]);
   useEffect(() => {
     const returnTo = new URL(window.location.href);
     returnTo.hash = "";
-    const query = new URLSearchParams({ returnTo: returnTo.toString() });
-    setLoginUrl(`/api/auth/login?${query.toString()}`);
-    void refresh();
-  }, [refresh]);
-  useEffect(() => {
-    const onFocus = () => {
-      void refresh();
-    };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [refresh]);
+    setLoginUrl(`/api/auth/login?${new URLSearchParams({ returnTo: returnTo.toString() })}`);
+  }, [pathname, query]);
   const run = async () => {
+    const revision = ++requestRevision.current;
     setRunning(true);
     setUnlocked(false);
     setError("");
     try {
       const result = await readApi<{ unlocked: boolean }>("/api/premium");
+      if (revision !== requestRevision.current) return;
       if (!result.unlocked) throw new AccessError();
       setUnlocked(true);
     } catch (cause) {
+      if (revision !== requestRevision.current) return;
       // Refresh the current entitlement after a rejected operation, including refunds.
-      await refresh();
+      const recoveryRevision = await loadProfile();
+      if (recoveryRevision !== requestRevision.current) return;
       const kind = cause instanceof AccessError ? cause.type : undefined;
       setError(
         kind === "premium_required"
@@ -86,11 +114,23 @@ export function useProductAccess() {
             ? t("errorAuth")
             : kind === "session_busy"
               ? t("errorBusy")
-              : t("errorDemo"),
+              : t("errorPlan"),
       );
     } finally {
       setRunning(false);
     }
   };
-  return { profile, loading, running, unlocked, error, loginUrl, refresh, run };
+  return { profile, loading, refreshing, running, unlocked, error, loginUrl, refresh, run };
+}
+
+type ProductAccess = ReturnType<typeof useProductAccessState>;
+const ProductAccessContext = createContext<ProductAccess | null>(null);
+export function ProductAccessProvider({ children }: { children: ReactNode }) {
+  const access = useProductAccessState();
+  return createElement(ProductAccessContext.Provider, { value: access }, children);
+}
+export function useProductAccess(): ProductAccess {
+  const access = useContext(ProductAccessContext);
+  if (!access) throw new Error("ProductAccessProvider is required");
+  return access;
 }

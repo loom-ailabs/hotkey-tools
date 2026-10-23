@@ -1,10 +1,10 @@
 # 中英文国际化
 
-Loom 使用 `next-intl 4.14.9`，为两套 Next.js 16 App Router/OpenNext 应用提供中英文页面、请求级消息和客户端翻译。中文继续使用 `/`、`/vision`、`/workspace`、`/pricing`，英文使用真实的 `/en` 路径；个人信息页为 `/account` 与 `/en/account`。
+Loom 使用 `next-intl 4.14.9`，为两套 Next.js 16 App Router/OpenNext 应用提供中英文页面、请求级消息和客户端翻译。英文为默认语言，使用 `/`、`/vision`、`/workspace`、`/pricing`；中文使用真实的 `/zh` 路径。个人信息页为 `/account` 与 `/zh/account`。旧 `/en` 页面地址由 next-intl 重定向到对应无前缀地址，保留原始查询。
 
 ## 方案与边界
 
-Next.js 官方推荐以动态语言段承载子路径语言路由；next-intl 提供对应的 App Router、服务端组件、客户端 Provider、导航和 SEO 支持。本项目采用 `app/[locale]`、`localePrefix: 'as-needed'` 和默认语言 `zh`。与自行实现字典相比，现成库还处理 ICU 消息和语言导航；与 next-i18next 相比，这里直接使用面向 App Router 的 next-intl 请求配置，不引入第二套翻译运行时。
+Next.js 官方推荐以动态语言段承载子路径语言路由；next-intl 提供对应的 App Router、服务端组件、客户端 Provider、导航和 SEO 支持。本项目采用 `app/[locale]`、`localePrefix: 'as-needed'` 和默认语言 `en`。与自行实现字典相比，现成库还处理 ICU 消息和语言导航；与 next-i18next 相比，这里直接使用面向 App Router 的 next-intl 请求配置，不引入第二套翻译运行时。
 
 - [Next.js 国际化](https://nextjs.org/docs/app/guides/internationalization)
 - [next-intl 路由接线](https://next-intl.dev/docs/routing/setup)
@@ -15,11 +15,11 @@ Next.js 官方推荐以动态语言段承载子路径语言路由；next-intl �
 
 ## 语言选择
 
-显式语言前缀优先。没有前缀时，代理只读取已验证的 `LOOM_LOCALE=zh|en` 偏好；没有有效偏好则使用中文。代理不使用 `Accept-Language` 自动改变默认语言，因此搜索引擎和首次访问者读取现有中文地址时行为稳定。
+显式语言前缀优先。没有前缀时，代理只读取已验证的 `LOOM_LOCALE=zh|en` 偏好；没有有效偏好则使用英文。代理不使用 `Accept-Language` 自动改变默认语言，因此搜索引擎和首次访问者读取默认英文地址时行为稳定；已保存中文偏好的用户仍进入 `/zh`，不会被默认值覆盖。
 
 正式环境的偏好 Cookie 使用 `Domain=.loom-labs.ai; Path=/; Secure; SameSite=Lax`，本地使用当前主机。它只含非敏感的语言代码，一年后过期，可由客户端更新；不与 HttpOnly 登录 Cookie 共用名称或内容。
 
-语言切换从当前页面构造目标地址，保留合法路径、原始查询及其中的 `returnTo`，移除片段。切回中文会移除 `/en`。偏好写入后进行文档导航，使另一个应用也能读取相同偏好。
+语言切换从当前页面构造目标地址，保留合法路径、原始查询及其中的 `returnTo`，移除片段。切换到英文会移除语言前缀，切换到中文使用 `/zh`。偏好写入后进行文档导航，使另一个应用也能读取相同偏好。
 
 ## 文件与调用
 
@@ -50,7 +50,7 @@ const { locale, switchLocale } = useLocaleSwitcher();
 
 ## 认证语言
 
-托管 Logto 登录保持统一的 `/api/auth/login` 和 `/api/auth/callback`。应用只把有效的偏好映射为 `extraParams.ui_locales = 'zh-CN' | 'en'`，不转发任意客户端额外参数。Logto 官方支持该 OIDC 参数，但最终显示取决于租户已支持的语言；它不改变身份或回调地址，也不保证 Google/GitHub 自身授权页使用相同语言。
+托管 Logto 登录保持统一的 `/api/auth/login` 和 `/api/auth/callback`。未设置有效偏好时使用英文；应用只把有效的偏好映射为 `extraParams.ui_locales = 'zh-CN' | 'en'`，不转发任意客户端额外参数。Logto 官方支持该 OIDC 参数，但最终显示取决于租户已支持的语言；它不改变身份或回调地址，也不保证 Google/GitHub 自身授权页使用相同语言。
 
 参考：[Logto UI locales](https://docs.logto.io/end-user-flows/authentication-parameters/ui-locales)。
 
@@ -58,12 +58,12 @@ const { locale, switchLocale } = useLocaleSwitcher();
 
 ## SEO 与隐私
 
-公开四类页面为每种语言生成独立 canonical、`zh-CN` / `en` / `x-default` hreflang、Open Graph、描述与 JSON-LD。站点地图收录八个公开地址，排除个人信息、认证和购买页面。中英文公开纯文本入口分别位于根目录和 `/en/llms.txt`、`/en/llms-full.txt`。
+公开四类页面为每种语言生成独立 canonical、`zh-CN` / `en` / `x-default` hreflang、Open Graph、描述与 JSON-LD。站点地图收录八个公开地址，排除个人信息、认证和购买页面。英文公开纯文本入口固定在根目录，中文入口为 `/zh/llms.txt`、`/zh/llms-full.txt`；旧 `/en/llms*.txt` 继续提供英文文本以兼容已有链接。`x-default` 指向默认英文地址。
 
 个人信息页明确 `noindex,nofollow,noarchive`；identity 全站保持禁止索引。私有 API 继续使用服务端认证、实时权益和 `private,no-store`，语言 Cookie 与 robots 不能授予任何访问权限。
 
 ## 验证
 
-新增测试覆盖无 Cookie 默认中文、显式英文优先、无效偏好、父域 Cookie 属性、查询保留、API 不被改写、消息键对应、双语 canonical/hreflang 和站点地图范围。实际 OpenNext 构建、Workers HTTP 及浏览器检查须分别记录；构建通过本身不代表已发布或第三方联调完成。
+新增测试覆盖无 Cookie 默认英文、显式中文优先、已有中文偏好保留、旧 `/en` 跳转、无效偏好、父域 Cookie 属性、查询保留、API 不被改写、消息键对应、双语 canonical/hreflang 和站点地图范围。实际 OpenNext 构建、Workers HTTP 及浏览器检查须分别记录；构建通过本身不代表已发布或第三方联调完成。
 
 next-intl 使用 ESM。涉及其导航的 Vitest 测试按[官方测试说明](https://next-intl.dev/docs/environments/testing)内联处理 `next-intl` 依赖，避免 Node 对 `next/navigation` 扩展名的解析差异；不修改 Next.js 或 next-intl 源码。

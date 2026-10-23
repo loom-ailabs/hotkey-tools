@@ -8,6 +8,7 @@ export function useShowcase() {
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [hovered, setHovered] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(true);
   const [visible, setVisible] = useState(false);
 
@@ -31,19 +32,28 @@ export function useShowcase() {
   useEffect(() => {
     if (!api) return;
     const select = () => setActive(api.selectedScrollSnap());
-    const interact = () => setPlaying(false);
+    const dragStart = () => setDragging(true);
+    const dragEnd = () => setDragging(false);
     select();
-    api.on("select", select).on("reInit", select).on("pointerDown", interact);
+    api
+      .on("select", select)
+      .on("reInit", select)
+      .on("pointerDown", dragStart)
+      .on("pointerUp", dragEnd);
     return () => {
-      api.off("select", select).off("reInit", select).off("pointerDown", interact);
+      api
+        .off("select", select)
+        .off("reInit", select)
+        .off("pointerDown", dragStart)
+        .off("pointerUp", dragEnd);
     };
   }, [api]);
-  const rotating = playing && !hovered && !reducedMotion && visible;
+  const rotating = playing && !hovered && !dragging && !reducedMotion && visible;
   useEffect(() => {
     if (!api || !rotating) return;
     const timer = window.setInterval(() => api.scrollNext(), 7_000);
     return () => window.clearInterval(timer);
-  }, [api, rotating]);
+  }, [api, rotating, active]);
   return {
     api,
     setApi,
@@ -53,18 +63,9 @@ export function useShowcase() {
     playing,
     pause: () => setPlaying(false),
     hover: setHovered,
-    toggle: () => setPlaying(!playing),
+    toggle: () => setPlaying((current) => !current),
     select: (index: number) => {
-      setPlaying(false);
       api?.scrollTo(index, reducedMotion);
-    },
-    previous: () => {
-      setPlaying(false);
-      api?.scrollPrev(reducedMotion);
-    },
-    next: () => {
-      setPlaying(false);
-      api?.scrollNext(reducedMotion);
     },
   };
 }

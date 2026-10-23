@@ -77,7 +77,7 @@ describe("WWW shared session and current D1 entitlement API", () => {
     });
     expect(await data(await premium())).toMatchObject({
       code: 0,
-      data: { unlocked: true, message: expect.stringContaining("演示") },
+      data: { unlocked: true, message: expect.stringContaining("工作计划") },
     });
     expect(mocks.hasPremium).toHaveBeenLastCalledWith(user.id);
     mocks.hasPremium.mockResolvedValue(false);

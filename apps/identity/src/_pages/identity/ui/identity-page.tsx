@@ -54,11 +54,7 @@ export function IdentityPage() {
           <h1 className="text-3xl leading-tight font-semibold tracking-tight sm:text-4xl">
             {t("title")}
           </h1>
-          <p className="text-sm leading-7 text-muted-foreground">
-            {t("description")}
-            <br />
-            {t("sandboxDescription")}
-          </p>
+          <p className="text-sm leading-7 text-muted-foreground">{t("description")}</p>
         </div>
         <ManageAccess />
         <p className="flex items-center justify-center gap-2 text-center text-xs leading-relaxed text-muted-foreground">

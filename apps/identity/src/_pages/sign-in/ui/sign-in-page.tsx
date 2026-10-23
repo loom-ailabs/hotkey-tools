@@ -52,7 +52,7 @@ export function SignInPage({ googleSignInUrl, githubSignInUrl, notice }: SignInP
           />
         </header>
         <main className="flex flex-1 items-center justify-center py-16">
-          <section aria-labelledby="sign-in-title" className="w-full max-w-sm">
+          <section aria-labelledby="sign-in-title" className="w-full max-w-sm text-center">
             <p className="mb-4 text-xs font-medium tracking-widest text-muted-foreground">
               {t("eyebrow")}
             </p>

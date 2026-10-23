@@ -1,5 +1,7 @@
 "use client";
 
+import { localizeUrl } from "@hotkey-tools/i18n/routing";
+
 import { useRef } from "react";
 import { useTranslations } from "@hotkey-tools/i18n";
 import { Link, useLocaleSwitcher } from "@hotkey-tools/i18n/navigation";
@@ -47,7 +49,7 @@ function ProfileAvatar({
   const name = user?.name?.trim() || user?.email || "Loom";
   const initial = Array.from(name)[0]?.toUpperCase() || "L";
   return (
-    <Avatar className={large ? "size-16 border" : "size-9 border"}>
+    <Avatar className={large ? "size-16 border" : "size-7 border"}>
       <AvatarImage src={user?.picture} alt="" />
       <AvatarFallback className={large ? "text-xl" : ""}>{initial}</AvatarFallback>
     </Avatar>
@@ -65,9 +67,8 @@ export function AccountMenu({ access }: { access: Access }) {
         <a
           href={access.loginUrl}
           className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-          aria-busy={access.loading}
         >
-          {access.loading ? t("syncing") : t("login")}
+          {t("login")}
         </a>
       </>
     );
@@ -78,7 +79,7 @@ export function AccountMenu({ access }: { access: Access }) {
           <button
             type="button"
             aria-label={t("accountMenu")}
-            className="rounded-full outline-none ring-offset-2 ring-offset-background transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex size-10 items-center justify-center rounded-full outline-none ring-offset-2 ring-offset-background transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ProfileAvatar user={user} />
           </button>
@@ -150,7 +151,7 @@ export function AccountProfile({ access }: { access: Access }) {
               ))}
             </dl>
             <Button asChild variant="outline" className="mt-6">
-              <a href={`https://checkout.loom-labs.ai${locale === "en" ? "/en" : "/"}`}>
+              <a href={localizeUrl("https://checkout.loom-labs.ai/", locale)}>
                 {t("managePurchase")}
                 <ArrowUpRight />
               </a>

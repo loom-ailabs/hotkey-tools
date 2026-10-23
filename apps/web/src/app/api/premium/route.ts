@@ -9,10 +9,10 @@ export async function GET() {
     const user = await getUser();
     if (!user) throw new ApiError(401, "unauthenticated", "请先登录。");
     if (!(await hasPremium(user.id)))
-      throw new ApiError(403, "premium_required", "购买后可访问示例高级功能。");
+      throw new ApiError(403, "premium_required", "解锁 Loom Pro 后即可查看工作计划。");
     return jsonSuccess({
       unlocked: true,
-      message: "你已通过服务端权益校验，可运行 Loom AI 固定演示工作计划；此功能不调用真实模型。",
+      message: "你已获得 Loom Pro 工作计划的访问权限。",
     });
   } catch (error) {
     return jsonError(error);

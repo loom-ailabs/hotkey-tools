@@ -9,7 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         languages: {
           "zh-CN": publicPageUrl(page.path, "zh"),
           en: publicPageUrl(page.path, "en"),
-          "x-default": publicPageUrl(page.path, "zh"),
+          "x-default": publicPageUrl(page.path, "en"),
         },
       },
     })),

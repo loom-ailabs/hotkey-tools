@@ -2,8 +2,7 @@
   "homeLabel": "Loom AI home",
   "eyebrow": "LOOM ACCOUNT",
   "title": "Your account and access.",
-  "description": "Manage your Loom account and try the complete purchase and unlock flow.",
-  "sandboxDescription": "This is a test environment. You will not be charged real money.",
+  "description": "Manage your Loom account and feature access.",
   "security": "Secure sign-in · Hosted checkout · Access saved to your account",
   "back": "Back to Loom workspace",
   "settings": "Preferences",
@@ -37,14 +36,14 @@
   "access": "Access",
   "unlocked": "Unlocked",
   "oneTime": "One-time purchase",
-  "unlockedDescription": "Your access is ready. Return to the workspace to continue.",
-  "purchaseDescription": "Make a test payment to try the complete purchase and unlock flow.",
+  "unlockedDescription": "Loom Pro is unlocked. Return to the workspace to view the work plan.",
+  "purchaseDescription": "Unlock Loom Pro with a one-time purchase to view the work plan.",
   "checking": "Checking…",
   "checkAccess": "Check access",
   "waiting": "Please wait…",
-  "checkout": "Go to test checkout",
+  "checkout": "Continue to checkout",
   "signInAndUnlock": "Sign in and unlock",
-  "paymentDisclaimer": "For testing only. No real charge. The checkout shows the test amount.",
+  "paymentDisclaimer": "Test payment · No real charge. The test amount is shown at checkout.",
   "benefits": {
     "account": "Purchases linked to this account",
     "confirmation": "Access unlocked after payment confirmation",
@@ -57,7 +56,7 @@
     "confirming": "Confirming your payment. Please wait…",
     "pending": "Your payment is still being processed. Refresh the status to check again. Closing this page will not interrupt confirmation.",
     "alreadyPaid": "This order is already paid. Your access is unlocked.",
-    "premiumVerified": "Access verified. You can use the premium features."
+    "premiumVerified": "Your Loom Pro access is active."
   },
   "errors": {
     "profile": "Unable to load your sign-in status. Refresh the status to try again.",

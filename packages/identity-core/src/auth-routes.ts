@@ -12,7 +12,17 @@ function signInUiLocale(request: Request): "zh-CN" | "en" {
     .map((item) => item.trim())
     .filter((item) => item.startsWith("LOOM_LOCALE="))
     .map((item) => item.slice("LOOM_LOCALE=".length));
-  return preferences.length === 1 && preferences[0] === "en" ? "en" : "zh-CN";
+  return preferences.length === 1 && preferences[0] === "zh" ? "zh-CN" : "en";
+}
+
+function signInTheme(request: Request): "light" | "dark" | undefined {
+  const preferences = (request.headers.get("cookie") ?? "")
+    .split(";")
+    .map((item) => item.trim())
+    .filter((item) => item.startsWith("LOOM_THEME="))
+    .map((item) => item.slice("LOOM_THEME=".length));
+  const value = preferences.length === 1 ? preferences[0] : undefined;
+  return value === "light" || value === "dark" ? value : undefined;
 }
 
 export function resolveLoginReturnTarget(
@@ -89,10 +99,11 @@ export function createAuthRoutes({
       }
       if (await getUser())
         return NextResponse.redirect(target, { status: 303, headers: privateHeaders });
+      const theme = signInTheme(request);
       const { url } = await auth.client.handleSignIn({
         redirectUri: `${auth.config.baseUrl}/api/auth/callback`,
         postRedirectUri: target,
-        extraParams: { ui_locales: signInUiLocale(request) },
+        extraParams: { ui_locales: signInUiLocale(request), ...(theme ? { theme } : {}) },
         ...(provider ? { directSignIn: { method: "social" as const, target: provider } } : {}),
       });
       return NextResponse.redirect(url, { status: 303, headers: privateHeaders });

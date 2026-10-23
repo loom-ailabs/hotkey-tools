@@ -1,5 +1,6 @@
 "use client";
 
+import { Languages, Palette } from "lucide-react";
 import { useAppearance } from "./appearance-provider";
 import { Button } from "./button";
 import {
@@ -32,7 +33,10 @@ export function PreferencesMenuItems({ locale, onLocaleChange, labels }: Prefere
   return (
     <>
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger>{labels.theme}</DropdownMenuSubTrigger>
+        <DropdownMenuSubTrigger>
+          <Palette aria-hidden="true" />
+          {labels.theme}
+        </DropdownMenuSubTrigger>
         <DropdownMenuSubContent sideOffset={4}>
           <DropdownMenuRadioGroup value={theme} onValueChange={setAppearance}>
             {(["light", "dark", "system"] as const).map((value) => (
@@ -44,7 +48,10 @@ export function PreferencesMenuItems({ locale, onLocaleChange, labels }: Prefere
         </DropdownMenuSubContent>
       </DropdownMenuSub>
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger>{labels.language}</DropdownMenuSubTrigger>
+        <DropdownMenuSubTrigger>
+          <Languages aria-hidden="true" />
+          {labels.language}
+        </DropdownMenuSubTrigger>
         <DropdownMenuSubContent sideOffset={4}>
           <DropdownMenuRadioGroup
             value={locale}

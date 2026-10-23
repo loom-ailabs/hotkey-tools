@@ -1,5 +1,7 @@
 "use client";
 
+import { localizeUrl } from "@hotkey-tools/i18n/routing";
+
 import Image from "next/image";
 import { Button } from "@hotkey-tools/ui";
 import { useLocale, useTranslations } from "@hotkey-tools/i18n";
@@ -56,7 +58,7 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
   const locale = useLocale();
   const access = useProductAccess();
   const premium = access.profile?.entitlements.premium ?? false;
-  const checkoutUrl = `https://checkout.loom-labs.ai${locale === "en" ? "/en" : "/"}`;
+  const checkoutUrl = localizeUrl("https://checkout.loom-labs.ai/", locale);
   const capabilities = [
     {
       number: "01",
@@ -100,7 +102,9 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
             </Link>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <AccountMenu access={access} />
+            <div className="flex w-32 shrink-0 items-center justify-end gap-2">
+              <AccountMenu access={access} />
+            </div>
             <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
               <Link href="/workspace">
                 {t("enterWorkspace")}
@@ -262,7 +266,7 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
                 <div className="flex items-center justify-between">
                   <Command className="size-5 text-link" />
                   <span className="rounded border border-link/30 bg-primary/10 px-2 py-1 text-xs text-link">
-                    Sandbox
+                    {t("paymentMode")}
                   </span>
                 </div>
                 <h3 className="mt-5 text-lg font-medium">Loom Pro</h3>
@@ -317,7 +321,7 @@ export function HomePage({ view = "home" }: { view?: ProductView }) {
             © {new Date().getFullYear()} Loom AI · {t("footerVision")}
           </p>
           <Link href="/pricing" className="text-xs text-muted-foreground hover:text-foreground">
-            {t("demoSandbox")}
+            {t("footerLink")}
           </Link>
         </div>
       </footer>

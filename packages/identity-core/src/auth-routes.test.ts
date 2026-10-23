@@ -67,7 +67,7 @@ it.each(["google", "github"])(
     expect(signIn).toHaveBeenCalledWith({
       redirectUri: `${origin}/api/auth/callback`,
       postRedirectUri: product,
-      extraParams: { ui_locales: "zh-CN" },
+      extraParams: { ui_locales: "en" },
       directSignIn: { method: "social", target: provider },
     });
     expect(response.headers.get("cache-control")).toBe("private, no-store");
@@ -78,13 +78,13 @@ it("defaults to the website workspace and supports the fixed legacy checkout tar
   expect(signIn).toHaveBeenLastCalledWith({
     redirectUri: `${origin}/api/auth/callback`,
     postRedirectUri: "https://www.loom-labs.ai/workspace",
-    extraParams: { ui_locales: "zh-CN" },
+    extraParams: { ui_locales: "en" },
   });
   await routes.login(request("?destination=checkout"));
   expect(signIn).toHaveBeenLastCalledWith({
     redirectUri: `${origin}/api/auth/callback`,
     postRedirectUri: "https://checkout.loom-labs.ai/",
-    extraParams: { ui_locales: "zh-CN" },
+    extraParams: { ui_locales: "en" },
   });
 });
 
@@ -98,20 +98,61 @@ it("maps the validated English preference to the official SDK ui_locales paramet
     expect.objectContaining({ extraParams: { ui_locales: "en" } }),
   );
 });
-it.each([
-  "",
-  "LOOM_LOCALE=zh",
-  "LOOM_LOCALE=fr",
-  "LOOM_LOCALE=%65n",
-  "LOOM_LOCALE=en; LOOM_LOCALE=zh",
-])("does not forward arbitrary or ambiguous locale input: %s", async (cookie) => {
+it("preserves an explicit Chinese preference for the official hosted login", async () => {
   await routes.login(
-    new Request(`${origin}/api/auth/login?ui_locales=attacker&extraParams=attacker`, {
-      headers: { cookie },
+    new Request(`${origin}/api/auth/login?provider=github`, {
+      headers: { cookie: "LOOM_LOCALE=zh" },
     }),
   );
-  expect(signIn).toHaveBeenLastCalledWith(
+  expect(signIn).toHaveBeenCalledWith(
     expect.objectContaining({ extraParams: { ui_locales: "zh-CN" } }),
+  );
+});
+
+it.each(["", "LOOM_LOCALE=fr", "LOOM_LOCALE=%65n", "LOOM_LOCALE=en; LOOM_LOCALE=zh"])(
+  "does not forward arbitrary or ambiguous locale input: %s",
+  async (cookie) => {
+    await routes.login(
+      new Request(`${origin}/api/auth/login?ui_locales=attacker&extraParams=attacker`, {
+        headers: { cookie },
+      }),
+    );
+    expect(signIn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ extraParams: { ui_locales: "en" } }),
+    );
+  },
+);
+it.each(["light", "dark"])(
+  "keeps the selected %s appearance for the hosted authentication flow",
+  async (theme) => {
+    await routes.login(
+      new Request(`${origin}/api/auth/login?provider=google&theme=attacker`, {
+        headers: { cookie: `unrelated=1; LOOM_THEME=${theme}; LOOM_LOCALE=zh` },
+      }),
+    );
+    expect(signIn).toHaveBeenLastCalledWith({
+      redirectUri: `${origin}/api/auth/callback`,
+      postRedirectUri: "https://www.loom-labs.ai/workspace",
+      extraParams: { ui_locales: "zh-CN", theme },
+      directSignIn: { method: "social", target: "google" },
+    });
+  },
+);
+it.each([
+  "",
+  "LOOM_THEME=system",
+  "LOOM_THEME=",
+  "LOOM_THEME=Dark",
+  "LOOM_THEME=attacker",
+  "LOOM_THEME=%64ark",
+  "LOOM_THEME=light; LOOM_THEME=dark",
+  "LOOM_THEME=dark; LOOM_THEME=dark",
+])("omits uncertain appearance overrides and ignores query theme: %s", async (cookie) => {
+  await routes.login(
+    new Request(`${origin}/api/auth/login?theme=dark&theme=light`, { headers: { cookie } }),
+  );
+  expect(signIn).toHaveBeenLastCalledWith(
+    expect.objectContaining({ extraParams: { ui_locales: "en" } }),
   );
 });
 it.each([

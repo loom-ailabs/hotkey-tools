@@ -2,7 +2,7 @@
 
 import { useTranslations } from "@hotkey-tools/i18n";
 import { Button, Carousel, CarouselContent, CarouselItem, cn } from "@hotkey-tools/ui";
-import { ArrowLeft, ArrowRight, Layers3, Pause, Play, ShieldCheck, Sparkles } from "lucide-react";
+import { Layers3, ShieldCheck, Sparkles } from "lucide-react";
 import { useShowcase } from "../model/use-showcase";
 import { LoginArt } from "./login-art";
 
@@ -28,13 +28,12 @@ export function LoginShowcase() {
             {!show.reducedMotion && (
               <Button
                 variant="ghost"
-                size="icon"
-                className="absolute right-5 top-0 z-10 rounded-full"
-                aria-label={show.playing ? t("pause") : t("play")}
+                size="sm"
+                className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:right-5 focus-visible:top-0 focus-visible:z-10 focus-visible:px-3 focus-visible:py-1"
                 onPointerDown={(event) => event.preventDefault()}
                 onClick={show.toggle}
               >
-                {show.playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+                {show.playing ? t("pause") : t("play")}
               </Button>
             )}
             <CarouselContent aria-live={show.rotating ? "off" : "polite"} aria-atomic="false">
@@ -63,16 +62,7 @@ export function LoginShowcase() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <div className="mt-8 flex items-center justify-center gap-5">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 rounded-full"
-                aria-label={t("previous")}
-                onClick={show.previous}
-              >
-                <ArrowLeft aria-hidden="true" />
-              </Button>
+            <div className="mt-8 flex justify-center">
               <div className="flex items-center gap-2" role="group" aria-label={t("choose")}>
                 {slides.map((slide, index) => (
                   <button
@@ -81,6 +71,7 @@ export function LoginShowcase() {
                     aria-label={t(`${slide}.title`)}
                     aria-disabled={show.active === index}
                     className="group flex h-8 w-8 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onPointerDown={(event) => event.preventDefault()}
                     onClick={() => {
                       if (show.active !== index) show.select(index);
                     }}
@@ -96,17 +87,7 @@ export function LoginShowcase() {
                   </button>
                 ))}
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 rounded-full"
-                aria-label={t("next")}
-                onClick={show.next}
-              >
-                <ArrowRight aria-hidden="true" />
-              </Button>
             </div>
-            <p className="mt-3 text-center text-xs text-muted-foreground/70">{t("preview")}</p>
           </Carousel>
         </div>
         <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-border/50 px-6 py-5 text-xs text-muted-foreground xl:px-8">
