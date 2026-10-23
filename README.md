@@ -4,6 +4,8 @@
 
 从初始化、身份源配置到支付联调的步骤见 [Identity 应用说明](apps/identity/README.md)。仓库工作约定见 [AGENTS.md](AGENTS.md)。
 
+当前运行环境、已准备对象与未完成的切换步骤统一记录在[生产切换说明](docs/production-cutover.md)。Logto 生产身份切换与 Stripe Live 分开处理；本次继续 Sandbox，正式 USD 1.00 仅作代码准备，不代表已开放真实付款。
+
 ## 应用与共享包
 
 | 目录                          | 技术栈                                                        | 职责                                                      |
@@ -75,15 +77,15 @@ mise identity coverage
 
 `verify` 检查 uv 锁文件，执行类型检查、Oxlint/Ruff、格式检查、Vitest/pytest、各 package 构建，以及全部 Worker 的部署打包检查。Identity 的覆盖率检查范围为服务端和 HTTP API，四项阈值均为 90%。
 
-本轮默认英文、产品措辞、导航账号状态复用、登录轮播与菜单图标已发布并验收。全仓 `mise run verify` 返回 0；identity-core 263、identity 149、web 32、i18n 10，共 454 项测试通过，旧 Worker 的 4 项另计。本地真实 Workerd 共享会话 9/9、本地 HTTP 67/67 和线上独立 HTTP 67/67 通过。当前 WWW 版本为 `a39d3bf2-e75b-492c-9af7-fe3cb14ac9a0`，identity 为 `17aeae33-1ab4-450e-af1e-074e7a690576`，部署读回确认两者均承接 100% 流量。以下早期测试和版本保留为历史。
+以下是此前默认英文、产品措辞、导航账号状态复用、登录轮播与菜单图标的历史验收。全仓 `mise run verify` 当时返回 0；identity-core 263、identity 149、web 32、i18n 10，共 454 项测试通过，旧 Worker 的 4 项另计。本地真实 Workerd 共享会话 9/9、本地 HTTP 67/67 和线上独立 HTTP 67/67 通过。当时 WWW 版本为 `a39d3bf2-e75b-492c-9af7-fe3cb14ac9a0`，identity 为 `17aeae33-1ab4-450e-af1e-074e7a690576`，部署读回确认两者均承接 100% 流量；这些版本与测试不作为本次生产身份切换的证据。
 
 早期域名方案曾通过全仓 `mise run verify` 和 182 项测试；当时 Identity 核心覆盖率为 statements 98.57%、branches 98.06%、functions 100%、lines 99.39%。旧 workers.dev 入口已完成真实 GitHub 登录、USD 1.00 Sandbox 付款开通、退出重登后持权及全额退款撤权；Workers 本地预览、本地 D1 smoke 和远端健康检查也已通过。
 
-最终域名分工为 `login.loom-labs.ai` 统一登录与回调、`checkout.loom-labs.ai` 账户与购买、`auth.loom-labs.ai` Logto 托管认证。产品携带 `returnTo` 跳转登录页；会话有效时直接返回原产品，否则完成登录后返回。返回地址只接受受信任的 Loom 产品地址并保留路径与查询，拒绝含片段的地址。www 与 checkout 通过同一随机 SID Cookie（`Domain=.loom-labs.ai`）访问 D1 会话，不再分别进行 OIDC 登录；令牌状态只以密文保存在 D1，两者从 D1 查询同一用户的当前权益。
+页面域名分工为 `login.loom-labs.ai` 统一登录与回调、`checkout.loom-labs.ai` 账户与购买；Logto 托管认证由 `LOGTO_ENDPOINT` 指定，`auth.loom-labs.ai` 是开发租户入口。产品携带 `returnTo` 跳转登录页；会话有效时直接返回原产品，否则完成登录后返回。返回地址只接受受信任的 Loom 产品地址并保留路径与查询，拒绝含片段的地址。www 与 checkout 通过同一随机 SID Cookie（`Domain=.loom-labs.ai`）访问 D1 会话，不再分别进行 OIDC 登录；令牌状态只以密文保存在 D1，两者从 D1 查询同一用户在当前支付模式下的有效权益。
 
 此前认证 checkpoint 已部署固定 14 天 D1 会话与短期令牌自动刷新：期限从成功回调起计算，刷新不延长期限；退出以 D1 撤销为准。当时 400 项测试、全仓验证、真实 Workerd 协议检查及 53 项线上匿名检查通过；真实 GitHub 三域共享登录、有效会话直接返回、官方 SDK 刷新与共享退出已验证。受控缩短测试会话截止时间后的三域拒绝，以及重新登录均已通过；这不是实际等待 14 天。该机制继续沿用，旧自包含 Cookie 不再接受；详见[会话生命周期](docs/session-lifecycle.md)。
 
-Logto 开发/生产租户由用户预先创建，本次仅配置开发租户，生产租户未改动。既有付款开通、退出重登持权及全额退款撤权保留为历史。本轮真实 GitHub 登录完整返回 `/workspace?source=login-polish&keep=a%2Bb`；Google 也已从官方账号选择、Logto 回调进入 WWW，并识别为此前同一身份。Logto 用户设置的只读检查显示既有 GitHub 与 Google 连接，本轮未执行关联、合并或连接编辑，也不按邮箱自动合并账号。
+Logto 开发/生产租户由用户预先创建；此前验收只使用开发租户，生产切换进度见[统一记录](docs/production-cutover.md)。既有付款开通、退出重登持权及全额退款撤权保留为历史。当时真实 GitHub 登录完整返回 `/workspace?source=login-polish&keep=a%2Bb`；Google 也已从官方账号选择、Logto 回调进入 WWW，并识别为此前同一身份。Logto 用户设置的只读检查显示既有 GitHub 与 Google 连接，该轮未执行关联、合并或连接编辑，也不按邮箱自动合并账号。
 
 `next build`、OpenNext build、Wrangler dry-run、本地预览、真实第三方联调与远端部署是不同的验证层级。打包或本地测试通过，不代表已完成远端迁移、登录、付款或免费套餐容量验证。
 
@@ -140,7 +142,7 @@ mise run web:deploy-dry-run
 mise run web:deploy
 ```
 
-主站由 `loom-web` Worker 承载 www 自定义域，统一登录与购买由 `loom-identity` Worker 提供；两者分别由原 `vite-react-template`、`hotkey-tools-identity` 原地更名。源码位于 `apps/web` 与 `apps/identity`，D1 数据库继续使用原名 `hotkey-tools-identity`。主站 Git Builds 的仓库与构建设置见 [Web 部署说明](apps/web/README.md)。正式环境由 login 写入父域随机会话标识，所有 Loom 子域都属于同一会话信任范围；D1 保存加密状态和撤销标记，退出先撤销再删除共享 Cookie。本地使用明确配置的 localhost 地址，不设置正式父域；Cookie 不按端口隔离，两应用需使用相同会话配置和数据库才能验证共享会话。部署本轮代码前先应用 identity 的 `0002_sessions.sql`；14 天内清除 Cookie、主动退出、上游失效或安全异常仍可能要求重登。
+主站由 `loom-web` Worker 承载 www 自定义域，统一登录与购买由 `loom-identity` Worker 提供；两者分别由原 `vite-react-template`、`hotkey-tools-identity` 原地更名。源码位于 `apps/web` 与 `apps/identity`，旧 D1 `hotkey-tools-identity` 保留，生产目标使用独立数据库。主站 Git Builds 的仓库与构建设置见 [Web 部署说明](apps/web/README.md)。部署环境由 login 写入父域随机会话标识，所有 Loom 子域都属于同一会话信任范围；D1 保存加密状态和撤销标记，退出先撤销再删除共享 Cookie。本地使用明确配置的 localhost 地址，不设置正式父域；Cookie 不按端口隔离，两应用需使用同一环境的会话配置和数据库。发布新支付代码前目标库须完成 `0001`—`0004`；14 天内清除 Cookie、主动退出、上游失效或安全异常仍可能要求重登。
 
 工作区当前提供人工整理的静态工作计划，不调用模型、创建文件或执行外部工具。产品界面使用工作计划、账号和访问权限等正式措辞，不以界面文案虚构生成或执行能力。用户到 checkout 进行 USD 1.00 Sandbox 单次测试付款后，可返回工作区手动刷新权益并打开计划；购买位置清楚标注测试支付、不真实扣款。每次受保护操作均重新查询服务端权益，全额退款后拒绝继续访问。
 

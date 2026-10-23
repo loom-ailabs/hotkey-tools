@@ -41,6 +41,20 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("manage account access", () => {
+  it.each([
+    ["en", "invalid_billing_mode"],
+    ["zh", "invalid_billing_mode"],
+    ["en", "billing_mode_mismatch"],
+    ["zh", "billing_mode_mismatch"],
+  ] as const)("maps %s %s to a safe localized configuration failure", async (locale, type) => {
+    api.fetchProfile.mockRejectedValue(
+      new ApiRequestError("raw provider configuration", 503, 1099, type),
+    );
+    const { result } = renderAccess(locale);
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.configurationMissing).toBe(true);
+    expect(result.current.failure?.message).toBe(messages[locale].errors.configuration);
+  });
   it.each(["zh", "en"] as const)(
     "retries payment confirmation in %s without dropping the page locale",
     async (locale) => {

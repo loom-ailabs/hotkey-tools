@@ -6,12 +6,12 @@
 
 ## 当前目标与应用边界
 
-- 在 `apps/identity` 实现账户与购买应用，跑通 Logto Cloud 登录、Stripe Sandbox 单次购买、D1 权益记录和服务端鉴权。
+- 在 `apps/identity` 实现账户与购买应用，支持 Logto Cloud 登录、Stripe 单次购买、D1 权益记录和服务端鉴权。当前仅切换 Logto 到现有生产租户；Stripe 因商户账号未激活，继续使用 Sandbox。USD 1.00 正式单次售价与 Live 支持仅为后续准备，未经再次明确要求不得开启真实收款。
 - 所有新增 Web 应用统一使用 **Next.js 全栈应用**：页面与业务 API 位于同一应用、同一服务和同一域名。每个产品在 `apps/<产品名>` 下拥有独立应用与 package。
 - 使用 App Router 承载页面，使用 `src/app/api/**/route.ts` 承载 HTTP API；应用业务逻辑放在本应用的 `src/server`。不要为同一个 Web 产品再新增独立 Hono、Express 网关或另一套 BFF。
 - Cloudflare 通过 OpenNext 将该 Next.js 应用部署为一个 Worker，同时提供页面、静态资源和 API。需要登录或动态 API 的应用不得设置 `output: "export"`。
 - `apps/web` 是 `www.loom-labs.ai` 的 Loom AI 产品首页与工作区，使用 Next.js/OpenNext 提供页面与受保护 API。`apps/identity` 提供统一登录入口与购买页；子域通过 `.loom-labs.ai` 的随机会话标识 Cookie 访问同一份 D1 会话与权益，使用相同的会话加密密钥和 Logto 应用。共享服务端实现提取到 package，禁止应用互相导入。
-- `apps/worker` 保留为旧网关示例，不承载正式首页或新的认证、支付逻辑。站点以实际交付能力使用正式产品文案，不在界面放置 Demo、示例或演示标签；当前工作计划按整理好的阅读与规划内容呈现，不宣称调用真实模型或代为执行任务。付款仍处于测试模式，购买位置必须清楚说明不会真实扣款。
+- `apps/worker` 保留为旧网关示例，不承载正式首页或新的认证、支付逻辑。站点以实际交付能力使用正式产品文案，不在界面放置 Demo、示例或演示标签；当前工作计划按整理好的阅读与规划内容呈现，不宣称调用真实模型或代为执行任务。付款说明由服务端配置的 Stripe 模式决定：test 必须说明不会真实扣款，live 显示正式金额与单次购买规则，不得保留测试支付或不会扣款的承诺。
 - `apps/python` 与 `packages/python/*` 保持既有 uv workspace 边界。只有明确需要 Python 的能力才由独立 Python Worker 提供；用户身份、订单和权益判断仍由 Next.js 服务负责。
 - 应用不能导入另一应用的实现。业务类型与接口定义先留在实际所有者中，多个活跃消费者确实需要共享时，再提取职责明确的 package。
 - 仓库根目录只管理 workspace、工具链与任务，不承载应用代码，不声明根 Python package。
@@ -103,7 +103,7 @@ apps/identity/src/
 
 ## 登录、支付与鉴权规则
 
-- 首版：Logto Cloud Free + Google/GitHub 登录，Stripe Sandbox 单次购买，D1 管理产品权益。
+- Logto Cloud Free + Google/GitHub 登录，Stripe 单次购买，D1 管理产品权益。开发租户与 Sandbox 保留；正式环境使用既有生产租户、新应用、专用会话密钥与独立生产 D1，不复制测试会话、订单或权益，不按邮箱自动迁移身份。
 - 使用已发布的 Logto 官方 SDK，回调验证 state、PKCE、issuer、audience 和签名；不能把 JWT decode 当作认证校验，不修改 SDK 源码以实现 Cookie 设置。
 - `login.loom-labs.ai` 统一发起登录并处理回调。有效会话直接返回原产品地址；会话绝对到期、已撤销或无法安全刷新时重新登录。返回地址必须校验 HTTPS、精确域名后缀、端口与用户信息，保留合法路径与查询；拒绝外域、含片段的地址及会引发登录循环的目标。
 - 正式会话 Cookie 为 `__Secure-loom_sid_<appId>`，登录流程 Cookie 为 `__Secure-loom_flow_<appId>`；两者仅保存随机标识，使用 `Domain=.loom-labs.ai; Path=/; Secure; HttpOnly; SameSite=Lax`，写入与删除必须匹配 Domain/Path。父域下的所有子域均属于会话信任范围；新增产品不得托管不受信任的子域内容或采用另一套会话密钥。本地不设置正式父域，且 Cookie 名不带 `__Secure-` 前缀。
@@ -114,13 +114,15 @@ apps/identity/src/
 - 不把 ID Token 当作通用业务 API access token；不依赖 Logto 付费 RBAC/API resources 才能实现首版付费鉴权。
 - 浏览器写操作检查配置的准确 Origin；Stripe Webhook 按原文与签名认证，不能要求用户登录或套用浏览器 Origin 校验。
 - 商品、Price、金额、币种与数量由服务端确定。先持久化本地订单，再使用稳定幂等键创建 Checkout。
-- 默认拒绝 Stripe Live 密钥、Live Price 和 Live 事件；在明确扩展与验收前，仅允许 Sandbox。
+- 使用经枚举校验的 `STRIPE_MODE=test|live` 明确选择支付环境，不从请求参数或密钥自动开启 Live。为兼容原开发配置，只有未设置模式时才默认 test；空字符串、空白或非法值必须拒绝。Key、Price、Session、PaymentIntent、事件与来源订单的模式必须一致。未完成商户激活、Live Price/Webhook 配置和验收前，不将现网站点配置为 live。
+- 订单与事件保存 `stripe_mode`，迁移将历史数据明确标为 test；权益查询同时核对来源订单、已付款状态与当前模式，测试购买不能解锁正式权益。当前 Logto 生产租户使用新独立 D1，但支付模式仍是 test；旧开发库保留。未来 Stripe Live 必须使用独立于测试支付的数据库，模式字段不能代替数据库隔离。
+- 新建 Stripe 对象 metadata 明确记录模式。只有历史 `checkout_payload_version=1`、配置与订单均为 test 时允许旧 metadata 缺少模式字段，其他归属字段仍须一致；新订单显式版本 2，test/live 都必须带匹配模式。历史版本 1 的 Checkout 重试必须保持原始请求字段与幂等键，不能补充 currency 或 metadata 后复用旧键；live 拒绝版本 1，所有模式都拒绝未知版本。回滚不得丢弃已发生的正式订单或让仍需处理的 Live Webhook 切回测试数据库。
 - 只有服务端核实支付成功后才发放权益，成功页参数不能授予权限。
 - Webhook 必须原文验签、事件去重、容忍重复及乱序；事件处理标记、订单更新与权益变更原子提交。处理失败必须可重试。
 - 权益按来源订单独立管理。确认成功全额退款后撤回对应订单权益，迟到成功事件不能恢复；其他有效订单仍可支撑使用权限。
 - 每次受保护操作检查当前权益。只隐藏按钮、长期缓存 `isPaid` 或把付费状态写入长期 Cookie/JWT，均不能代替服务端鉴权。
 - D1 是会话、订单与权益的权威存储，KV 只承载可容忍传播延迟的缓存或配置。
-- 测试与生产密钥、Webhook 密钥、回调域名和数据库分开配置；密钥不进入 `NEXT_PUBLIC_*`、源码、生成页面或提交记录。
+- 测试与生产密钥、Webhook 密钥、回调域名和数据库分开配置；密钥不进入 `NEXT_PUBLIC_*`、源码、生成页面或提交记录。真实付款与退款验收由用户本人提交；不得为了验证正式配置自行扣款或退款。商户身份、结算资料与服务协议由用户本人完成。
 
 ## 代码质量与验证
 

@@ -4,6 +4,8 @@
 
 Logto 负责认证和短期令牌刷新，D1 保存可撤销会话、用户、订单和权益，Stripe Sandbox 负责测试付款。付费权限由业务数据库判断，不依赖 Logto 的 RBAC 或自定义 API resources。开发租户可用功能不能代替生产 Free 套餐的验证。
 
+线上使用的 Logto 租户、数据库及对象配置进度统一见[生产切换说明](../../docs/production-cutover.md)。用户决定本次继续 Sandbox，Live 关闭；未来 USD 1.00 正式单次购买仅完成代码准备。
+
 ## 中英文与外观
 
 登录与购买页面默认英文根路径，中文使用 `/zh`；旧 `/en` 页面保留原始 query 并规范跳转到英文根路径。登录操作区居中，右侧产品愿景轮播默认自动播放，可视控制只保留分页点，键盘聚焦可操作暂停/播放，并遵循减少动态效果设置。购买页使用账号、访问权限和一次性解锁等正式措辞，购买位置明确显示测试支付、不真实扣款；工作计划仍为主站人工整理的静态内容。
@@ -44,7 +46,7 @@ Wrangler CLI 由 mise 安装并固定版本；OpenNext 的 Node API 与运行时
 - `apps/identity/.env.local`：仅公开的 Next.js 本地配置，密钥项保持为空。
 - `apps/identity/.dev.vars`：Next.js/OpenNext 本地绑定与真实本地密钥。
 - 两个文件均由 `setup` 在缺失时从 `.env.example` 创建，不会覆盖已有内容，且已被 Git 忽略。
-- 服务端优先读取 OpenNext/Workers bindings 中的非空值，再使用进程环境。避免两个本地文件中保留不一致的非空配置。
+- 服务端优先读取 OpenNext/Workers bindings 中的非空值，再使用进程环境；`STRIPE_MODE` 例外，显式空串保留并交给校验拒绝，不能回退到其他模式。避免两个本地文件中保留不一致的配置。
 
 ## 配置项
 
@@ -59,9 +61,10 @@ Wrangler CLI 由 mise 安装并固定版本；OpenNext 的 Node API 与运行时
 | `LOGTO_APP_SECRET`      | 同一应用的客户端密钥                                                                                                                 | 仅 `.dev.vars`；远端 Worker Secret |
 | `LOGTO_COOKIE_DOMAIN`   | 生产固定 `.loom-labs.ai`；本地 localhost 留空                                                                                        | 本地公开配置；远端 Worker Variable |
 | `LOGTO_COOKIE_SECRET`   | 至少 32 字符的随机密钥输入，用于派生 D1 会话状态加密密钥；共享应用、重启和重新部署时保持一致                                         | 仅 `.dev.vars`；远端 Worker Secret |
-| `STRIPE_SECRET_KEY`     | 与商品、Price、Webhook 同一 Sandbox 的 `sk_test_` 密钥                                                                               | 仅 `.dev.vars`；远端 Worker Secret |
+| `STRIPE_MODE`           | 精确 `test` 或 `live`；仅未设置时默认 test，空串和非法值拒绝；当前保持 test                                                          | 本地公开配置；远端 Worker Variable |
+| `STRIPE_SECRET_KEY`     | 与模式、商品、Price、Webhook 一致的密钥，test 使用 `sk_test_`、live 使用 `sk_live_`；当前不配置 Live                                 | 仅 `.dev.vars`；远端 Worker Secret |
 | `STRIPE_WEBHOOK_SECRET` | 当前回调目标对应的 `whsec_` 签名密钥；CLI 转发与远端 endpoint 的密钥不同                                                             | 仅 `.dev.vars`；远端 Worker Secret |
-| `STRIPE_PRICE_ID`       | Sandbox 中启用的、金额大于零的一次性固定 Price                                                                                       | 本地环境文件；远端 Worker Variable |
+| `STRIPE_PRICE_ID`       | 当前模式中启用的一次性固定 Price；代码对 live 固定校验 USD 1.00，当前继续 Sandbox                                                    | 本地环境文件；远端 Worker Variable |
 | `DB`                    | D1 binding，不是连接字符串                                                                                                           | `wrangler.jsonc` 的 `d1_databases` |
 
 可用 `openssl rand -base64 32` 生成 Cookie 密钥，再保存至本地文件或 Secret。不要提交实际凭据、将它们放入 `NEXT_PUBLIC_*`，或在命令行参数、页面、截图和日志中展示密钥。根 `.env` 不替代应用配置。
@@ -81,7 +84,7 @@ Wrangler CLI 由 mise 安装并固定版本；OpenNext 的 Node API 与运行时
 
 ### 自定义域名与原用户归属
 
-当前公开配置如下。login 与 checkout 绑定本 Worker，auth 是已就绪的 Logto 自定义域名。GitHub 返回、付款开通、退出重登持权及全额退款撤权已有历史验收；本轮 GitHub 与 Google 均已真实完成中央回调并进入 WWW。
+以下为此前已验收的开发租户配置，保留作开发参考；生产目标和实际切换状态见[统一记录](../../docs/production-cutover.md)。login 与 checkout 绑定本 Worker，auth 是开发租户的 Logto 自定义域名。该配置下 GitHub 返回、Sandbox 付款与全额退款撤权，以及 Google 中央回调均已有历史验收。
 
 ```dotenv
 APP_URL=https://checkout.loom-labs.ai
@@ -97,7 +100,7 @@ LOGTO_USER_NAMESPACE=https://kpy72v.logto.app
 
 这次从自包含 Cookie 切换到 D1 会话：旧 `__Secure-loom_session_<appId>` 和 host-only `logto_<appId>` 均不再作为登录依据，已有用户需要一次重新登录。退出清理同 Domain/Path 的新旧父域 Cookie，以及当前 host 的旧 Cookie。原 `LOGTO_COOKIE_SECRET` 保留为服务端密钥派生输入，不能将其写入浏览器。
 
-同一个 Logto 租户切换访问域名时，必须保持 `LOGTO_APP_ID`、Cookie 密钥及 `LOGTO_USER_NAMESPACE` 稳定。现有用户的 `users.issuer` 已保存原 endpoint，因此本租户固定为 `https://kpy72v.logto.app`，无需改写数据库或重新关联订单。该字段现在表示固定的本地身份命名空间；实际 OIDC issuer 仍由 SDK 从当前 endpoint 的 discovery 获取并校验。命名空间只能用于同一个已确认租户，不能用于自动合并其他租户；不按邮箱匹配用户。未固定命名空间而直接换域可能触发用户主键冲突，应用会拒绝请求。
+仅在同一个 Logto 租户更换访问域名时，必须保持 `LOGTO_APP_ID`、Cookie 密钥及 `LOGTO_USER_NAMESPACE` 稳定。此前开发用户的 `users.issuer` 已保存原 endpoint，因此开发租户固定为 `https://kpy72v.logto.app`，无需改写数据库或重新关联订单。该字段表示固定的本地身份命名空间；实际 OIDC issuer 仍由 SDK 从当前 endpoint 的 discovery 获取并校验。生产租户另用自己的 namespace，不沿用开发值；命名空间不能用于自动合并其他租户，也不按邮箱匹配用户。未固定命名空间而直接换域可能触发用户主键冲突，应用会拒绝请求。
 
 ### Google/GitHub 接入 Logto
 
@@ -116,7 +119,7 @@ Google 的测试受众需要包含实际测试账号；所需设置以该 OAuth 
 
 供应商 OAuth secrets 保存在 **Logto connector** 中，本应用不另设 `GOOGLE_CLIENT_SECRET` 或 `GITHUB_CLIENT_SECRET`。使用专用 OAuth 应用时，仍需完成上述供应商配置步骤。参考 [Google connector](https://docs.logto.io/integrations/google)、[GitHub connector](https://docs.logto.io/integrations/github)和[社交登录启用步骤](https://docs.logto.io/connectors/social-connectors)。
 
-Logto 开发/生产租户由用户预先创建，本次仅配置开发租户，生产租户未改动。Google OAuth 测试受众中本次新增 1 名自用账号，Google/GitHub 演示连接器均已替换为专用配置；GitHub 已在新旧入口完成真实登录。
+Logto 开发/生产租户由用户预先创建。以下记录属于此前开发租户验收：Google OAuth 测试受众新增 1 名自用账号，Google/GitHub 演示连接器均已替换为专用配置；GitHub 已在新旧入口完成真实登录。生产对象与当前切换状态以[生产切换说明](../../docs/production-cutover.md)为准，不把开发身份源的验收当作生产已完成。
 
 早期 Google 测试曾到达同邮箱账号的显式关联页，并按用户选择停止该分支。本轮 Google 已从官方账号选择、Logto 回调进入 WWW，应用识别为此前同一身份；Logto 用户设置的只读检查显示已有 GitHub 与 Google 连接。本轮未执行关联、合并或连接编辑，不能据此声称本轮创建了连接，也不以邮箱自动合并账号。 Google 登录后三域均识别同一用户且 premium=false，随后统一退出后三域匿名；再次 GitHub 登录已返回 WWW 根路径。
 
@@ -134,9 +137,11 @@ Logto 开发/生产租户由用户预先创建，本次仅配置开发租户，�
 
 14 天是应用允许的最长绝对期限，不是无条件免登录承诺。清除 Cookie、主动退出、上游令牌失效、密钥或 endpoint 变化，以及安全异常都可能提前要求重新登录。尚未接入 Logto 控制台禁用用户的实时回通道。应用使用稳定的 `(租户命名空间, subject)` 记录用户，不以邮箱关联购买；ID Token 不作为通用业务 API 的 bearer token。详细设计、迁移与验证边界见[会话生命周期](../../docs/session-lifecycle.md)。
 
-## Stripe Sandbox 单次购买
+## Stripe 单次购买与模式隔离
 
-在同一个 Stripe Sandbox 中创建商品及启用的一次性固定 Price，配置 Secret Key 和 Price ID。本期仅接受 `sk_test_`、测试 Price、测试 Session/PaymentIntent 和测试事件；Live 配置会被拒绝。
+通过 `STRIPE_MODE=test|live` 明确选择模式；只有未配置时默认 test，空白或非法值拒绝，不从密钥推断 Live。密钥、Price、Session、PaymentIntent、事件和来源订单必须匹配模式。当前用户决定继续 Sandbox，Live 未开启；未来正式价格 USD 1.00 的代码校验不代表已能真实收款。
+
+`orders` 与 `stripe_events` 保存模式，历史记录由 `0003` 标为 test。新订单显式使用 payload 版本 2，metadata 写入模式；旧 test-v1 重试保留原请求体及幂等键，不新增 currency 或模式 metadata，只有该分支允许旧 metadata 缺少模式。live-v1 和未知版本拒绝。权益必须来自同用户、同产品和功能的已付款订单，且与当前模式匹配；test 接受 v1/v2，live 只接受 v2。独立数据库和身份切换规则见[生产切换说明](../../docs/production-cutover.md)。
 
 购买流程：
 
@@ -185,7 +190,7 @@ mise identity preview
 
 中央登录预览为 `http://localhost:3001`，WWW 为 `http://localhost:3000`。两应用本地使用相同 Cookie key 和 localhost（Domain 留空），统一 LOGIN_URL=localhost:3001、AUTH_SUCCESS_URL=localhost:3000。预览清空生产 routes，不放宽正式准确 Origin 检查；真实本地 OAuth 需登记中央 localhost:3001 回调。
 
-本轮英文默认、正式产品文案、居中登录、默认自动轮播和菜单图标已发布。全仓 `mise run verify` 返回 0；identity-core 263、identity 149、web 32、i18n 10，共 454 项测试通过，旧 Worker 4 项另计。本地真实 Workerd 共享会话 9/9、本地 HTTP 67/67、线上独立 HTTP 67/67 通过。当前 identity 版本 `17aeae33-1ab4-450e-af1e-074e7a690576`、WWW 版本 `a39d3bf2-e75b-492c-9af7-fe3cb14ac9a0` 均已读回为 100% 流量；GitHub 完整返回 `/workspace?source=login-polish&keep=a%2Bb`，Google 也已完成真实应用回调并进入 WWW。以下版本与测试保留为历史。
+以下为此前英文默认、正式产品文案、居中登录、默认自动轮播和菜单图标的历史验收。全仓 `mise run verify` 当时返回 0；identity-core 263、identity 149、web 32、i18n 10，共 454 项测试通过，旧 Worker 4 项另计。本地真实 Workerd 共享会话 9/9、本地 HTTP 67/67、线上独立 HTTP 67/67 通过。当时 identity 版本 `17aeae33-1ab4-450e-af1e-074e7a690576`、WWW 版本 `a39d3bf2-e75b-492c-9af7-fe3cb14ac9a0` 均已读回为 100% 流量；GitHub 完整返回 `/workspace?source=login-polish&keep=a%2Bb`，Google 也已完成开发租户应用回调并进入 WWW。这些结果不代表生产身份切换已验收。
 
 此前 D1 会话认证 checkpoint：identity 为 `9e04b462-53e1-4660-8636-3c13139b00cc`，WWW 为 `3b1091f9-a959-4352-91ac-54b6f0731811`，`0002_sessions.sql` 已应用。当时 core 239、identity 137、WWW 24，共 400 项测试通过；core 覆盖率为 statements 98.17%、branches 95.47%、functions 100%、lines 98.75%。真实 GitHub 三域共享登录、官方 SDK 刷新、共享退出及受控绝对到期拒绝已验证；不将此称为真实等待 14 天。本地 Workerd 9 组通过。该会话机制继续沿用，证据见[会话生命周期](../../docs/session-lifecycle.md)。
 
@@ -203,7 +208,7 @@ mise identity preview
 
 ## Cloudflare 部署
 
-`wrangler.jsonc` 的目标 Worker 名为 `loom-identity`，入口为 `.open-next/worker.js`，静态资源为 `.open-next/assets`，D1 binding 为 `DB`。D1 数据库仍名为 `hotkey-tools-identity`，其 ID、迁移命令和既有数据不随 Worker 更名。默认不配置 R2 缓存，动态用户数据不使用共享缓存。参考 [Cloudflare Next.js](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/)和 [OpenNext 配置](https://opennext.js.org/cloudflare/get-started)。
+`wrangler.jsonc` 的目标 Worker 名为 `loom-identity`，入口为 `.open-next/worker.js`，静态资源为 `.open-next/assets`，D1 binding 为 `DB`。原地更名时旧 D1 `hotkey-tools-identity` 及既有数据保持不变；本次生产身份切换另用独立 D1，目标与进度见[生产切换说明](../../docs/production-cutover.md)。默认不配置 R2 缓存，动态用户数据不使用共享缓存。参考 [Cloudflare Next.js](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/)和 [OpenNext 配置](https://opennext.js.org/cloudflare/get-started)。
 
 2026-10-23 已将 Cloudflare 中既有 `hotkey-tools-identity` Worker 原地更名为 `loom-identity`，本地 `name` 与云端一致。更名后回读确认既有部署仍承接 100% 流量，Secrets、D1 binding 及 `login.loom-labs.ai` / `checkout.loom-labs.ai` 自定义域名保留。后续类似迁移不要仅修改 `name` 后直接部署，以免创建另一 Worker；应先完成云端原地更名并回查绑定。Secrets 只核对名称，不输出值；不改会话密钥、Logto 参数、Stripe Webhook 或其他业务标识。
 
@@ -223,7 +228,7 @@ mise identity db-migrate
 
 首次尚未创建 Worker 时，可以先部署配置未完整的应用，页面将显示待配置；之后补齐配置并重新部署。不要因此把该次发布当作登录或付款已通过。
 
-在 Worker Variables 中设置 `APP_URL`、`LOGTO_ENDPOINT`、`LOGTO_APP_ID`、`STRIPE_PRICE_ID`，按目标配置 `LOGIN_URL`、`AUTH_SUCCESS_URL` 与固定 `LOGTO_USER_NAMESPACE`；在 Worker Secrets 中分别设置四项密钥，也可用下列交互命令逐个输入：
+在 Worker Variables 中设置 `APP_URL`、`LOGTO_ENDPOINT`、`LOGTO_APP_ID`、`STRIPE_MODE`、`STRIPE_PRICE_ID`，按目标配置 `LOGIN_URL`、`AUTH_SUCCESS_URL` 与固定 `LOGTO_USER_NAMESPACE`；在 Worker Secrets 中分别设置四项密钥，也可用下列交互命令逐个输入：
 
 ```bash
 mise identity wrangler secret put LOGTO_APP_SECRET
@@ -232,7 +237,7 @@ mise identity wrangler secret put STRIPE_SECRET_KEY
 mise identity wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
 
-本应用 APP_URL 为 checkout，WWW 的 APP_URL 为 www，仅用于各自页面/API 与准确 Origin 检查。两应用 SDK baseUrl 统一 LOGIN_URL=login，OIDC 回调仅在 login；共享 Cookie Domain=.loom-labs.ai、D1、app ID、原 identity key、endpoint 和 namespace 全部一致。先应用 `0002_sessions.sql`，再部署两应用，避免新版本缺少会话表；旧 Cookie 不会迁移，需一次重新登录。Stripe endpoint 继续指向 checkout，付款和退款协议不变。之后运行：
+本应用 APP_URL 为 checkout，WWW 的 APP_URL 为 www，仅用于各自页面/API 与准确 Origin 检查。两应用 SDK baseUrl 统一 LOGIN_URL=login，OIDC 回调仅在 login；同一环境的 Cookie Domain=.loom-labs.ai、D1、app ID、会话密钥、endpoint 和 namespace 全部一致。目标库先应用 `0001`—`0004`，再发布读取新字段的两应用。跨租户不迁移旧会话，使用新生产密钥且重新登录；旧数据库保留，不能按邮箱迁入测试权益。Stripe endpoint 继续指向 checkout，当前模式仍为 test。之后运行：
 
 ```bash
 mise identity deploy
@@ -242,7 +247,7 @@ mise identity deploy
 
 ## 数据与接口
 
-`migrations/0001_identity.sql` 包含 `users`、`orders`、`entitlements`、`stripe_events`；`0002_sessions.sql` 新增 `auth_sessions`，保存加密 SDK 状态、固定截止时间、撤销标记、刷新版本/租约与流程关联。后续新增 migration，不修改已应用的文件。本地和远端数据库相互独立；不要将远端资源误当成本地测试库。
+`migrations/0001_identity.sql` 包含 `users`、`orders`、`entitlements`、`stripe_events`；`0002_sessions.sql` 新增 `auth_sessions`；`0003_stripe_mode.sql` 为订单和事件增加模式并将历史记录标为 test；`0004_checkout_payload_version.sql` 为旧 Checkout 请求保留版本 1，新订单显式使用 2。迁移按顺序应用，不能修改已应用文件。本地、Sandbox 与生产数据库相互独立；不要将远端资源误当成本地测试库。
 
 | 路由                        | 行为                                                     |
 | --------------------------- | -------------------------------------------------------- |
@@ -254,7 +259,7 @@ mise identity deploy
 | `POST /api/checkout`        | 同源、已登录；创建或恢复该用户的购买尝试                 |
 | `GET /api/orders/:id`       | 仅返回当前用户的订单                                     |
 | `GET /api/premium`          | 要求已登录且存在有效权益                                 |
-| `POST /api/webhooks/stripe` | 原文验签、处理测试事件及权益                             |
+| `POST /api/webhooks/stripe` | 原文验签、核对当前模式并处理事件及权益                   |
 
 自有 JSON API 成功返回 `{ code: 0, msg: "success", data }`，失败返回 `{ code, msg, error: { type } }` 并保留相应 HTTP status；业务码集中在 `src/server/http-codes.ts`。私有数据响应使用 `private, no-store`。登录跳转按 OIDC 流程返回，不套 JSON 格式。
 

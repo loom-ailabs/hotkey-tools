@@ -21,6 +21,7 @@ const variableNames = [
   "LOGTO_APP_SECRET",
   "LOGTO_COOKIE_SECRET",
   "LOGTO_COOKIE_DOMAIN",
+  "STRIPE_MODE",
 ] as const;
 
 beforeEach(() => {
@@ -55,6 +56,12 @@ describe("Cloudflare environment boundary", () => {
     vi.stubEnv("LOGTO_APP_SECRET", "local-app-secret");
     getCloudflareContext.mockResolvedValue({ env: { LOGTO_APP_SECRET: "" } });
     expect((await getEnv()).LOGTO_APP_SECRET).toBe("local-app-secret");
+  });
+
+  it("preserves an explicitly blank payment mode for validation instead of falling back to live", async () => {
+    vi.stubEnv("STRIPE_MODE", "live");
+    getCloudflareContext.mockResolvedValue({ env: { STRIPE_MODE: "" } });
+    expect((await getEnv()).STRIPE_MODE).toBe("");
   });
 
   it("does not fabricate environment or database bindings after a runtime failure", async () => {

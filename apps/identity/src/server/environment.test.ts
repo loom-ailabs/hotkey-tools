@@ -21,6 +21,7 @@ const variableNames = [
   "LOGTO_APP_SECRET",
   "LOGTO_COOKIE_SECRET",
   "LOGTO_COOKIE_DOMAIN",
+  "STRIPE_MODE",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_PRICE_ID",
@@ -58,6 +59,12 @@ describe("Cloudflare environment boundary", () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_local_fallback");
     getCloudflareContext.mockResolvedValue({ env: { STRIPE_SECRET_KEY: "" } });
     expect((await getEnv()).STRIPE_SECRET_KEY).toBe("sk_test_local_fallback");
+  });
+
+  it("preserves an explicit empty billing mode for fail-closed validation", async () => {
+    vi.stubEnv("STRIPE_MODE", "live");
+    getCloudflareContext.mockResolvedValue({ env: { STRIPE_MODE: "" } });
+    expect((await getEnv()).STRIPE_MODE).toBe("");
   });
 
   it("does not fabricate environment or database bindings after a runtime failure", async () => {

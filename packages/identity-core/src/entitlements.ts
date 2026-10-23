@@ -1,11 +1,22 @@
 import "server-only";
+import type { StripeMode } from "./billing-types";
+
 export const PRODUCT_KEY = "hotkey-tools";
 export const FEATURE_KEY = "premium-demo";
-export async function hasPremiumInDatabase(db: D1Database, userId: string): Promise<boolean> {
+export async function hasPremiumInDatabase(
+  db: D1Database,
+  userId: string,
+  mode: StripeMode = "test",
+): Promise<boolean> {
   const row = await db
-    .prepare(`SELECT order_id FROM entitlements
- WHERE user_id = ? AND product_key = ? AND feature_key = ? AND revoked_at IS NULL LIMIT 1`)
-    .bind(userId, PRODUCT_KEY, FEATURE_KEY)
+    .prepare(`SELECT e.order_id FROM entitlements e
+ JOIN orders o ON o.id = e.order_id
+   AND o.user_id = e.user_id AND o.product_key = e.product_key AND o.feature_key = e.feature_key
+ WHERE e.user_id = ? AND e.product_key = ? AND e.feature_key = ? AND e.revoked_at IS NULL
+   AND o.status = 'paid' AND o.stripe_mode = ?
+   AND (o.checkout_payload_version = 2
+     OR (o.stripe_mode = 'test' AND o.checkout_payload_version = 1)) LIMIT 1`)
+    .bind(userId, PRODUCT_KEY, FEATURE_KEY, mode)
     .first<{ order_id: string }>();
   return row !== null;
 }

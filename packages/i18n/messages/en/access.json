@@ -43,7 +43,6 @@
   "waiting": "Please wait…",
   "checkout": "Continue to checkout",
   "signInAndUnlock": "Sign in and unlock",
-  "paymentDisclaimer": "Test payment · No real charge. The test amount is shown at checkout.",
   "benefits": {
     "account": "Purchases linked to this account",
     "confirmation": "Access unlocked after payment confirmation",
@@ -66,7 +65,6 @@
     "purchase": "Unable to start a purchase right now. Please try again shortly.",
     "premium": "Unable to use this feature right now. Please try again shortly.",
     "configuration": "Service setup is incomplete. Please try again later.",
-    "sandbox": "Test payment setup is unavailable. Please try again later.",
     "authentication": "Your sign-in has expired. Please sign in again.",
     "busy": "Your sign-in is being updated. Please refresh the status shortly.",
     "permission": "Unlock Loom Pro before using premium features.",
@@ -76,5 +74,15 @@
     "checkoutUnavailable": "Checkout is temporarily unavailable. Please try again shortly.",
     "alreadyUnlocked": "Your account already has access. Refresh the status.",
     "unavailable": "The service is temporarily unavailable. Please try again shortly."
+  },
+  "billing": {
+    "test": {
+      "mode": "Sandbox",
+      "disclaimer": "Test payment · No real charge. The test amount is shown at checkout."
+    },
+    "live": {
+      "mode": "One-time purchase",
+      "disclaimer": "USD 1.00 · One-time purchase. Payment is collected securely on Stripe’s hosted checkout. No subscription or automatic renewal."
+    }
   }
 }

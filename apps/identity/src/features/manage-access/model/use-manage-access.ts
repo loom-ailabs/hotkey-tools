@@ -10,8 +10,10 @@ const errorKeys = {
   AUTH_NOT_CONFIGURED: "configuration",
   database_not_configured: "configuration",
   billing_not_configured: "configuration",
-  sandbox_required: "sandbox",
-  invalid_price_configuration: "sandbox",
+  sandbox_required: "configuration",
+  invalid_price_configuration: "configuration",
+  invalid_billing_mode: "configuration",
+  billing_mode_mismatch: "configuration",
   unauthenticated: "authentication",
   session_renewal_failed: "authentication",
   session_busy: "busy",
@@ -175,9 +177,15 @@ export function useManageAccess() {
 
   const configurationMissing =
     failure instanceof ApiRequestError &&
-    ["AUTH_NOT_CONFIGURED", "database_not_configured", "billing_not_configured"].includes(
-      failure.type ?? "",
-    );
+    [
+      "AUTH_NOT_CONFIGURED",
+      "database_not_configured",
+      "billing_not_configured",
+      "invalid_billing_mode",
+      "billing_mode_mismatch",
+      "invalid_price_configuration",
+      "sandbox_required",
+    ].includes(failure.type ?? "");
 
   return {
     profile,

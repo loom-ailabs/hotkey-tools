@@ -2,13 +2,15 @@
 
 `www.loom-labs.ai` 是独立 Next.js/OpenNext Worker，提供英文默认路径 `/`、`/vision`、`/pricing`、`/workspace`、对应中文 `/zh` 路径与同源 API。工作区提供人工整理的静态工作计划，不调用模型、创建文件或执行外部操作，不使用 Hash 路由；界面采用正式产品措辞，购买处保留真实的测试支付说明。
 
-登录统一由 `login.loom-labs.ai` 发起，经 `auth.loom-labs.ai` 的 Logto 完成。WWW、checkout、login 使用同一 D1、app ID、endpoint、原 identity 密钥与固定租户命名空间。生产 Cookie `__Secure-loom_sid_<appId>` 只保存随机会话标识，设置 `Domain=.loom-labs.ai; Path=/; HttpOnly; Secure; SameSite=Lax`；SDK 令牌状态加密保存在 D1。10 分钟登录流程使用相同属性的 `__Secure-loom_flow_<appId>`。
+登录统一由 `login.loom-labs.ai` 发起，使用 `LOGTO_ENDPOINT` 指定的 Logto。WWW、checkout、login 在同一环境内使用同一 D1、app ID、endpoint、会话密钥与固定租户命名空间。生产 Cookie `__Secure-loom_sid_<appId>` 只保存随机会话标识，设置 `Domain=.loom-labs.ai; Path=/; HttpOnly; Secure; SameSite=Lax`；SDK 令牌状态加密保存在 D1。10 分钟登录流程使用相同属性的 `__Secure-loom_flow_<appId>`。
+
+运行中的 Logto、D1 及新应用配置进度统一见[生产切换说明](../../docs/production-cutover.md)。本次继续 `STRIPE_MODE=test`，Live 关闭；未来 USD 1.00 单次正式购买只完成代码准备。
 
 会话从成功回调起最多保留 14 天，刷新短期令牌不会延长该截止时间。服务端按需通过官方 SDK 自动刷新，并重新检查身份，页面和 RSC 不需要重写 Cookie。刷新结果不确定或租约过期时拒绝继续使用；清除 Cookie、退出或上游失效也可能在 14 天前要求登录。旧自包含父域 Cookie 和 `logto_<appId>` 主机 Cookie 不再接受，已有用户需一次重新登录；详见[会话生命周期](../../docs/session-lifecycle.md)。
 
 产品登录带完整 `returnTo` 路径和 query；已有有效会话时中央入口直接返回产品，匿名用户选择 Google/GitHub。只接受 HTTPS 的规范 `*.loom-labs.ai`，排除 login/auth、用户信息、非标准端口与 hash。无显式目标时，同产品 Referer 可保留初始未水合链接的路径；其他来源使用固定 `/workspace`。
 
-共享实现位于 `packages/identity-core`，通过官方 Node/edge SDK 处理 OIDC 与刷新，Next cookies 只读写随机标识；D1 是可撤销会话的权威存储。WWW 不加载 Stripe SDK 或密钥。购买仍在 checkout，回到 WWW 后实时查询同一份 D1 权益。
+共享实现位于 `packages/identity-core`，通过官方 Node/edge SDK 处理 OIDC 与刷新，Next cookies 只读写随机标识；D1 是可撤销会话的权威存储。WWW 不加载 Stripe SDK 或密钥，只读取经校验的 `STRIPE_MODE`。购买仍在 checkout，回到 WWW 后查询同一环境的 D1 权益：来源订单必须已付款、模式匹配且归属一致；test 接受 payload 版本 1/2，live 只接受 2，测试 grant 不能解锁正式权益。页面、SEO 和 AI 文本说明同样按服务端模式选择，不能在 live 文案中保留不真实扣款的承诺。
 
 ## 中英文、外观与个人信息
 
@@ -40,7 +42,7 @@ mise run web:deploy-dry-run
 
 JSON 统一 `{code:0,msg:"success",data}` / `{code:正整数,msg,error:{type}}`，均为 private/no-store 且 noindex。`GET /api/me` 返回 `{user:{id,name?,email?,picture?}|null,entitlements:{premium:boolean}}`。`GET /api/premium` 每次验证会话和 D1：匿名 401、无有效授权 403、有授权 200 `{unlocked:true,message}`。`POST /api/auth/logout` 只接受本产品准确 Origin，先撤销 D1 共享会话，再尽力撤销上游令牌，finally 清 Cookie，最终 303 登出；不因共享 Cookie 而放宽 CORS/CSRF。当前 SID 的复制件在撤销后也失效，刷新或已知关联流程的迟到回调不能使其恢复；不宣称退出其他设备或撤销无关联的独立新授权。
 
-`wrangler.jsonc` 的部署目标为 Worker `loom-web`。2026-10-23 已将既有 `vite-react-template` 原地更名，继续承载 `www.loom-labs.ai`。公开 Variables 包括 APP_URL、LOGIN_URL、AUTH_SUCCESS_URL、LOGTO_ENDPOINT、LOGTO_USER_NAMESPACE、LOGTO_APP_ID、LOGTO_COOKIE_DOMAIN；Secret 仅 LOGTO_APP_SECRET 和与 identity 相同的 LOGTO_COOKIE_SECRET，不包含 Stripe。后者作为 D1 状态加密的密钥派生输入保留。部署本轮代码前先由 identity 应用 `0002_sessions.sql`，两应用必须绑定同一份会话数据库。真正 OIDC 回调只登记中央 `https://login.loom-labs.ai/api/auth/callback`，其他旧回调暂留登记但产品服务拒绝非中央主机回调。
+`wrangler.jsonc` 的部署目标为 Worker `loom-web`。2026-10-23 已将既有 `vite-react-template` 原地更名，继续承载 `www.loom-labs.ai`。公开 Variables 包括 APP_URL、LOGIN_URL、AUTH_SUCCESS_URL、LOGTO_ENDPOINT、LOGTO_USER_NAMESPACE、LOGTO_APP_ID、LOGTO_COOKIE_DOMAIN、STRIPE_MODE；Secret 仅 LOGTO_APP_SECRET 和与 identity 相同的 LOGTO_COOKIE_SECRET，不包含 Stripe。后者作为 D1 状态加密的密钥派生输入。同一环境两应用必须绑定同一份数据库；新支付代码发布前先由 identity 在目标库完成 `0001`—`0004`，跨环境不复制会话和测试权益。真正 OIDC 回调只登记中央 `https://login.loom-labs.ai/api/auth/callback`，其他旧回调暂留登记但产品服务拒绝非中央主机回调。
 
 父域会话发送给所有子域，须将其视为同一信任域。端到端验收仍须使用真实浏览器证明登录、跨产品识别、支付、退款撤权和共享退出；构建与合成 Cookie 运输测试各有独立证据边界。
 
@@ -81,4 +83,4 @@ JSON 统一 `{code:0,msg:"success",data}` / `{code:正整数,msg,error:{type}}`�
 - USD 1.00 Sandbox 付款后，返回 WWW 可运行预置演示；退出重登仍保留权益。随后全额退款，原登录用户的高级接口返回 `premium_required`，工作区不再展示计划。
 - Google Search Console 已完成 HTML 所有权验证，站点图已成功处理并发现四页；生成式 AI 搜索继承父域“包含”。这不代表搜索索引或排名已完成。
 
-当前仍使用 Logto 开发租户与 Stripe Sandbox；Google 登录的本轮结果见上方当前验收，历史关联页记录不再代表当前未验。完整操作记录与 Sandbox 验证步骤见[飞书文档](https://bytedance.larkoffice.com/docx/O5IUdAY2bon0L1x72gucn73NnOh)；SEO 与 AI 阅读入口见[专项说明](../../docs/seo-geo.md)。
+上述 Google/GitHub 记录属于此前开发租户验收，不代表新生产 connector 已验收；运行环境和切换进度以[生产切换说明](../../docs/production-cutover.md)为准。完整操作记录与 Sandbox 验证步骤见[飞书文档](https://bytedance.larkoffice.com/docx/O5IUdAY2bon0L1x72gucn73NnOh)；SEO 与 AI 阅读入口见[专项说明](../../docs/seo-geo.md)。
