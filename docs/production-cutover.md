@@ -1,22 +1,29 @@
 # 生产身份切换与支付模式
 
-## 当前状态与验收：已发布，真实联调进行中
+## 当前状态与验收：已发布，身份绑定待确认
 
 两 Worker 已实际切换至 Logto 生产 Free 租户 `5z8hdi` 和独立生产 D1，并回读确认各承接 100% 流量。Stripe 继续使用原 Sandbox，`STRIPE_MODE=test`，Live 未开启。USD 1.00 单次购买已作为未来正式价格写入代码校验，但不代表已能收取真实款项。生产身份与测试支付是本次实际组合，不能把两者混称为 Live。
 
-| 验收项            | 已发生事实与边界                                                                                                                                                       |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 代码              | [20b8b40c3b466f4b4abf502482d7b15f2d460539](https://github.com/loom-ailabs/loom-web/commit/20b8b40c3b466f4b4abf502482d7b15f2d460539) 已推送至 `feat/production-cutover` |
-| Worker 发布       | Identity `66a7533d-124c-4951-b328-aad2a01c8bdb`；WWW `84ef3b06-40f1-4969-9ff0-506dcbc528e2`；CLI 回读均为 100%                                                         |
-| Git Builds        | Cloudflare WWW 生产分支已保存为 `feat/production-cutover`，其余构建参数不变                                                                                            |
-| 全仓检查          | `verify-release` 返回 0；core 295、identity 237、web 69、i18n 14，共 615 项；旧 Worker 4 项另计                                                                        |
-| 覆盖率            | Identity statements/branches/functions/lines 为 99.58%/98.94%/100%/100%；core 为 98.27%/95.85%/100%/98.82%                                                             |
-| 本地运行时        | 新 Worker preview 8 项、共享会话 9 组通过；不替代真实第三方授权                                                                                                        |
-| 线上匿名 smoke    | WWW 26 项通过，Identity smoke 通过；法务四页 200、canonical/lang 与 sitemap 12 URL 检查共 5 项通过；不代替真实登录和付款                                               |
-| 生产租户真实登录  | GitHub 已到官方授权页，两种身份源的首次真实授权仍待用户确认；尚未完成应用回调、三域共享身份和统一退出验收                                                              |
-| 新库 Sandbox 购买 | 尚未验证新身份下的付款、重登持权和退款撤权；旧记录不作为本轮证据                                                                                                       |
+| 验收项             | 已发生事实与边界                                                                                                                                                                                                                                                                        |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 代码               | [20b8b40c3b466f4b4abf502482d7b15f2d460539](https://github.com/loom-ailabs/loom-web/commit/20b8b40c3b466f4b4abf502482d7b15f2d460539) 已推送至 `feat/production-cutover`                                                                                                                  |
+| Worker 发布        | Identity `66a7533d-124c-4951-b328-aad2a01c8bdb`；WWW `84ef3b06-40f1-4969-9ff0-506dcbc528e2`；CLI 回读均为 100%                                                                                                                                                                          |
+| Git Builds         | Cloudflare WWW 生产分支已保存为 `feat/production-cutover`，其余构建参数不变                                                                                                                                                                                                             |
+| 全仓检查           | `verify-release` 返回 0；core 295、identity 237、web 69、i18n 14，共 615 项；旧 Worker 4 项另计                                                                                                                                                                                         |
+| 覆盖率             | Identity statements/branches/functions/lines 为 99.58%/98.94%/100%/100%；core 为 98.27%/95.85%/100%/98.82%                                                                                                                                                                              |
+| 本地运行时         | 新 Worker preview 8 项、共享会话 9 组通过；不替代真实第三方授权                                                                                                                                                                                                                         |
+| 线上匿名 smoke     | WWW 26 项通过，Identity smoke 通过；法务四页 200、canonical/lang 与 sitemap 12 URL 检查共 5 项通过；不代替真实登录和付款                                                                                                                                                                |
+| 生产租户真实登录   | GitHub、Google 均已完成生产身份源授权和 OIDC 回调；WWW/login/checkout 的 `/api/me` 返回同一非空 `user.id`，Google 与 GitHub 当前进入同一账号                                                                                                                                            |
+| 共享会话           | 实际 SID 为 `Domain=.loom-labs.ai; Path=/; Secure; HttpOnly; SameSite=Lax`，D1 `expires_at-created_at` 恰为 14 天；有效会话从 login 精确保留 path/query 返回                                                                                                                            |
+| 新库 Sandbox 购买  | 订单 `b89d7632-b1ca-40c9-b5e2-4567a866f505` 的付款阶段已验证：Stripe Session/Price/PaymentIntent 均为 test、100 cents/USD 且归属匹配，D1 payload v2、验签事件 processed；当时 grant active、WWW 工作计划及 Profile Loom Pro 可见。该订单现已全额退款                                    |
+| 统一退出与重放拒绝 | GitHub 会话退出后三域均匿名，SID/Flow 清除；真实旧 SID 重放被拒绝，重放测试 Cookie 已清理。Google 登录验收后也已退出，login 的 `/api/me` 确认匿名                                                                                                                                       |
+| GitHub 重登持权    | 付款后、退款前的 GitHub 退出重登已验证：仍为同一非空用户 ID、premium 恢复，新 SID 与已撤销旧 SID 不同；不代表退款后仍有 Pro                                                                                                                                                             |
+| Sandbox 退款撤权   | 唯一退款 `re_3UTixRK268Z7hNOa02NZhwjU` 成功，100 cents 全额退回；D1 订单 refunded、grant revoked，3 个退款事件 processed 且 pending_webhooks=0。退款验收时用户仍已登录，WWW 高级 API 返回 403/premium_required，premium=false；手动刷新工作区显示 Signed in · Explore，最终有效权益为 0 |
+| 身份绑定待确认     | Logto 当前账号存在 GitHub、Google 两条 Social connections；保留两个登录方式或解除 Google 绑定已询问用户，尚待决定，未执行解绑。当前不能据此宣称两身份源账号隔离通过                                                                                                                     |
 
-以下对象配置和旧验收分开记录；后续真实联调结果更新本节，不将配置存在或旧租户登录成功当作本轮通过。
+以下对象配置和旧验收分开记录，不将配置存在或旧租户登录成功当作本轮通过。本轮证据位于 `.codex-artifacts/production-cutover/`：`production-shared-session-e2e.json`、`production-logout-e2e.json`、`production-sandbox-payment.json`、`production-relogin-e2e.json`、`production-sandbox-refund.json`、`production-refund-ui-api.json` 与 `production-google-e2e.json`；不记录原始 SID、令牌或个人资料。
+
+同邮箱自动关联开关当前回读为关闭（Value 0），但关闭开关不会解除已有身份连接。Agent 未执行 Link/Bind 操作；审计目前仅确认首次 Social GitHub 注册和本次 Google SignIn，尚未建立两条身份连接的关联时间与原因。因此不声称“未发生关联”，也不将当前开关状态当作历史关联行为的证明；唯一待办是用户决定保留两个登录方式或解除 Google 绑定。
 
 ## 已配置对象
 
@@ -32,7 +39,7 @@
 | Logto 品牌              | 生产租户已保存并重载：Dark mode 开启、浅色主色 `#3A72B3`、深色主色 `#8BBFFF`，复用仓库 CSS；未上传原生 Logo/Favicon，未启用 Pro                                                                                                                           |
 | Stripe                  | 保留同一 Sandbox 的 USD 1.00（100 cents）Price、测试密钥和 Webhook；Live 未开启                                                                                                                                                                           |
 
-Google connector 以本表最终 ID 为准，早期未保存的临时 ID 不作为有效对象。四个经用户批准的法务页面已上线并取得 200：[Privacy](https://www.loom-labs.ai/privacy)、[Terms](https://www.loom-labs.ai/terms)、[中文隐私说明](https://www.loom-labs.ai/zh/privacy)、[中文使用规则](https://www.loom-labs.ai/zh/terms)。Google 已登记 Privacy/Terms，并按用户批准正式发布 OAuth 应用；Audience 实际回读“发布状态：正式版”“用户类型：外部”，操作为“返回测试版”。品牌验证随后通过并完成发布，控制台回读“您的品牌已经过验证，正在向用户显示”；数据访问仅含 openid、基本资料和邮箱，验证中心确认不涉及敏感或受限范围。首次真实授权仍等待用户确认，尚不标记应用登录成功。
+Google connector 以本表最终 ID 为准，早期未保存的临时 ID 不作为有效对象。四个经用户批准的法务页面已上线并取得 200：[Privacy](https://www.loom-labs.ai/privacy)、[Terms](https://www.loom-labs.ai/terms)、[中文隐私说明](https://www.loom-labs.ai/zh/privacy)、[中文使用规则](https://www.loom-labs.ai/zh/terms)。Google 已登记 Privacy/Terms，并按用户批准正式发布 OAuth 应用；Audience 实际回读“发布状态：正式版”“用户类型：外部”，操作为“返回测试版”。品牌验证随后通过并完成发布，控制台回读“您的品牌已经过验证，正在向用户显示”；数据访问仅含 openid、基本资料和邮箱，验证中心确认不涉及敏感或受限范围。Google、GitHub 的真实应用回调均已通过，当前账号的双身份源连接状态及待决策边界见上方验收记录。
 
 WWW Git Builds 已从 `feat/production-cutover` 的后续文档与检查脚本提交 `b9bf7d8` 自动构建并部署 `bd55c5bf-f9b3-4e86-81a7-9f26f82f6969`，CLI 与控制台均回读 100% 流量。该版本仍使用生产 Logto、新 D1 与 Stripe test；26 项线上匿名检查再次通过。上表保留首次切换的版本作为发布基线，后续纯文档提交可能继续产生新的自动部署版本。
 
