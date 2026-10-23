@@ -32,7 +32,9 @@
 | Logto 品牌              | 生产租户已保存并重载：Dark mode 开启、浅色主色 `#3A72B3`、深色主色 `#8BBFFF`，复用仓库 CSS；未上传原生 Logo/Favicon，未启用 Pro                                                                                                                           |
 | Stripe                  | 保留同一 Sandbox 的 USD 1.00（100 cents）Price、测试密钥和 Webhook；Live 未开启                                                                                                                                                                           |
 
-Google connector 以本表最终 ID 为准，早期未保存的临时 ID 不作为有效对象。四个经用户批准的法务页面已上线并取得 200：[Privacy](https://www.loom-labs.ai/privacy)、[Terms](https://www.loom-labs.ai/terms)、[中文隐私说明](https://www.loom-labs.ai/zh/privacy)、[中文使用规则](https://www.loom-labs.ai/zh/terms)。Google 已登记 Privacy/Terms，并按用户批准正式发布 OAuth 应用；Audience 实际回读“发布状态：正式版”“用户类型：外部”，操作为“返回测试版”。这不等于品牌已验证；验证中心尚未检查。首次真实授权仍等待用户确认，尚不标记应用登录成功。
+Google connector 以本表最终 ID 为准，早期未保存的临时 ID 不作为有效对象。四个经用户批准的法务页面已上线并取得 200：[Privacy](https://www.loom-labs.ai/privacy)、[Terms](https://www.loom-labs.ai/terms)、[中文隐私说明](https://www.loom-labs.ai/zh/privacy)、[中文使用规则](https://www.loom-labs.ai/zh/terms)。Google 已登记 Privacy/Terms，并按用户批准正式发布 OAuth 应用；Audience 实际回读“发布状态：正式版”“用户类型：外部”，操作为“返回测试版”。品牌验证随后通过并完成发布，控制台回读“您的品牌已经过验证，正在向用户显示”；数据访问仅含 openid、基本资料和邮箱，验证中心确认不涉及敏感或受限范围。首次真实授权仍等待用户确认，尚不标记应用登录成功。
+
+WWW Git Builds 已从 `feat/production-cutover` 的后续文档与检查脚本提交 `b9bf7d8` 自动构建并部署 `bd55c5bf-f9b3-4e86-81a7-9f26f82f6969`，CLI 与控制台均回读 100% 流量。该版本仍使用生产 Logto、新 D1 与 Stripe test；26 项线上匿名检查再次通过。上表保留首次切换的版本作为发布基线，后续纯文档提交可能继续产生新的自动部署版本。
 
 切换前，旧库三笔 open Sandbox Session 已限定执行 expire，并由旧 Webhook 确认：pending 由 3 降为 0，expired 由 0 增为 3；paid=1、refunded=3、有效权益=1 均保持不变。旧库完整保留，这些测试历史和权益没有迁入新生产 D1。
 
