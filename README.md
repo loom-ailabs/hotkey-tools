@@ -140,7 +140,7 @@ mise run web:deploy-dry-run
 mise run web:deploy
 ```
 
-主站复用现有 `vite-react-template` Worker 与 www 自定义域；源码来自 `apps/web`，不再提供原 Vite 占位页。正式环境由 login 写入父域随机会话标识，所有 Loom 子域都属于同一会话信任范围；D1 保存加密状态和撤销标记，退出先撤销再删除共享 Cookie。本地使用明确配置的 localhost 地址，不设置正式父域；Cookie 不按端口隔离，两应用需使用相同会话配置和数据库才能验证共享会话。部署本轮代码前先应用 identity 的 `0002_sessions.sql`；14 天内清除 Cookie、主动退出、上游失效或安全异常仍可能要求重登。
+主站由 `loom-web` Worker 承载 www 自定义域，统一登录与购买由 `loom-identity` Worker 提供；两者分别由原 `vite-react-template`、`hotkey-tools-identity` 原地更名。源码位于 `apps/web` 与 `apps/identity`，D1 数据库继续使用原名 `hotkey-tools-identity`。主站 Git Builds 的仓库与构建设置见 [Web 部署说明](apps/web/README.md)。正式环境由 login 写入父域随机会话标识，所有 Loom 子域都属于同一会话信任范围；D1 保存加密状态和撤销标记，退出先撤销再删除共享 Cookie。本地使用明确配置的 localhost 地址，不设置正式父域；Cookie 不按端口隔离，两应用需使用相同会话配置和数据库才能验证共享会话。部署本轮代码前先应用 identity 的 `0002_sessions.sql`；14 天内清除 Cookie、主动退出、上游失效或安全异常仍可能要求重登。
 
 工作区当前提供人工整理的静态工作计划，不调用模型、创建文件或执行外部工具。产品界面使用工作计划、账号和访问权限等正式措辞，不以界面文案虚构生成或执行能力。用户到 checkout 进行 USD 1.00 Sandbox 单次测试付款后，可返回工作区手动刷新权益并打开计划；购买位置清楚标注测试支付、不真实扣款。每次受保护操作均重新查询服务端权益，全额退款后拒绝继续访问。
 

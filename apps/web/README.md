@@ -46,7 +46,7 @@ JSON 统一 `{code:0,msg:"success",data}` / `{code:正整数,msg,error:{type}}`�
 
 ### Git Builds 配置
 
-目标仓库为 [loom-ailabs/hotkey-tools](https://github.com/loom-ailabs/hotkey-tools)。生产暂用已部署代码所在的 `feat/session-renewal`；`main` 尚不包含本轮最新 WWW，合并并验证后再切换生产分支。
+目标仓库为 [loom-ailabs/loom-web](https://github.com/loom-ailabs/loom-web)（GitHub 仓库由 `hotkey-tools` 更名）。生产暂用已部署代码所在的 `feat/session-renewal`；`main` 尚不包含本轮最新 WWW，合并并验证后再切换生产分支。
 
 | 配置项          | 值                                                                     |
 | --------------- | ---------------------------------------------------------------------- |
