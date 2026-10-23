@@ -77,7 +77,9 @@ mise identity coverage
 
 截至 2026-10-23，最终域名方案已通过全仓 `mise run verify` 和 182 项测试；Identity 核心覆盖率为 statements 98.57%、branches 98.06%、functions 100%、lines 99.39%。旧 workers.dev 入口已完成真实 GitHub 登录、USD 1.00 Sandbox 付款开通、退出重登后持权及全额退款撤权；Workers 本地预览、本地 D1 smoke 和远端健康检查也已通过。
 
-最终域名分工为 `login.loom-labs.ai` 统一登录与回调、`checkout.loom-labs.ai` 账户与购买、`auth.loom-labs.ai` Logto 托管认证。产品携带 `returnTo` 跳转登录页；会话有效时直接返回原产品，否则完成登录后返回。返回地址只接受受信任的 Loom 产品地址并保留路径与查询，拒绝含片段的地址。www 与 checkout 使用同一加密会话 Cookie（`Domain=.loom-labs.ai`），不再分别进行 OIDC 登录；两者从 D1 查询同一用户的当前权益。
+最终域名分工为 `login.loom-labs.ai` 统一登录与回调、`checkout.loom-labs.ai` 账户与购买、`auth.loom-labs.ai` Logto 托管认证。产品携带 `returnTo` 跳转登录页；会话有效时直接返回原产品，否则完成登录后返回。返回地址只接受受信任的 Loom 产品地址并保留路径与查询，拒绝含片段的地址。www 与 checkout 通过同一随机 SID Cookie（`Domain=.loom-labs.ai`）访问 D1 会话，不再分别进行 OIDC 登录；令牌状态只以密文保存在 D1，两者从 D1 查询同一用户的当前权益。
+
+本轮已部署固定 14 天 D1 会话与短期令牌自动刷新：期限从成功回调起计算，刷新不延长期限；退出以 D1 撤销为准。400 项测试、全仓验证、真实 Workerd 协议检查及 53 项线上匿名检查通过；真实 GitHub 三域共享登录、有效会话直接返回、官方 SDK 刷新与共享退出已验证。受控缩短本轮测试会话截止时间后的三域拒绝，以及重新登录均已通过；这不是实际等待 14 天。旧自包含 Cookie 不再接受，需要一次重新登录；详见[会话生命周期](docs/session-lifecycle.md)。
 
 Logto 开发/生产租户由用户预先创建，本次仅配置开发租户，生产租户未改动。新域已验证 GitHub 的两种固定返回、付款开通、退出重登持权及全额退款撤权。Google 已完成上游授权并到达显式关联页，依用户选择保持未关联，应用回调和 www 返回未验。未来可使用未占用邮箱的 Google 身份，或另行明确关联后补验；本次不继续关联。
 
@@ -130,7 +132,7 @@ mise run web:deploy-dry-run
 mise run web:deploy
 ```
 
-主站复用现有 `vite-react-template` Worker 与 www 自定义域；源码来自 `apps/web`，不再提供原 Vite 占位页。正式环境由 login 写入父域会话，所有 Loom 子域都属于同一会话信任范围；退出会删除该共享 Cookie。本地使用明确配置的 localhost 地址，不设置正式父域；Cookie 不按端口隔离，需使用相同会话配置，或分别进行预览验证。
+主站复用现有 `vite-react-template` Worker 与 www 自定义域；源码来自 `apps/web`，不再提供原 Vite 占位页。正式环境由 login 写入父域随机会话标识，所有 Loom 子域都属于同一会话信任范围；D1 保存加密状态和撤销标记，退出先撤销再删除共享 Cookie。本地使用明确配置的 localhost 地址，不设置正式父域；Cookie 不按端口隔离，两应用需使用相同会话配置和数据库才能验证共享会话。部署本轮代码前先应用 identity 的 `0002_sessions.sql`；14 天内清除 Cookie、主动退出、上游失效或安全异常仍可能要求重登。
 
 首页只模拟 Loom AI 的固定工作计划，不调用真实模型或外部工具。用户登录主站后，到 checkout 完成 USD 1.00 Sandbox 单次测试付款，再返回工作区刷新权益并运行 Pro 演示。每次受保护操作均重新查询服务端权益；全额退款后拒绝继续访问。当前只支持测试付款。
 

@@ -146,6 +146,23 @@ it("validates each product's exact write Origin and returns logout to that produ
   signOut.mockRejectedValue(new Error("fixture"));
   expect((await routes.logout(post("https://checkout.loom-labs.ai"))).status).toBe(503);
 });
+it("supports the central host's own logout while rejecting a sibling Origin and unknown host", async () => {
+  getEnv.mockResolvedValue({ ...env, LOGIN_URL: origin });
+  const post = (host: string, source: string) =>
+    new Request(`${host}/api/auth/logout`, {
+      method: "POST",
+      headers: { origin: source },
+    });
+  expect((await routes.logout(post(origin, origin))).status).toBe(303);
+  expect(signOut).toHaveBeenCalledWith(`${origin}/`);
+  signOut.mockClear();
+  expect((await routes.logout(post(origin, "https://checkout.loom-labs.ai"))).status).toBe(403);
+  expect(
+    (await routes.logout(post("https://unknown.loom-labs.ai", "https://checkout.loom-labs.ai")))
+      .status,
+  ).toBe(403);
+  expect(signOut).not.toHaveBeenCalled();
+});
 it("allows only configured local product origins during development", () => {
   expect(
     resolveLoginReturnTarget(

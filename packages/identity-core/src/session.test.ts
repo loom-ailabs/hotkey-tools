@@ -1,268 +1,172 @@
-import { CookieStorage, PersistKey } from "@logto/node";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import LogtoSessionClient, { getLogtoContext, sessionCookieName } from "./session";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import LogtoSessionClient, { flowCookieName, getLogtoContext, sessionCookieName } from "./session";
 
-type CookieOptions = {
-  domain?: string;
-  path?: string;
-  maxAge?: number;
-  httpOnly?: boolean;
-  secure?: boolean;
-  sameSite?: string;
-};
-type Adapter = {
-  storage: CookieStorage;
-  navigate: (url: string) => unknown;
-};
-
-const sdk = vi.hoisted(() => ({
+const mocks = vi.hoisted(() => ({
   construct: vi.fn(),
-  signIn: vi.fn(),
-  callback: vi.fn(),
+  start: vi.fn(),
+  complete: vi.fn(),
   signOut: vi.fn(),
   context: vi.fn(),
+  get: vi.fn(),
+  set: vi.fn(),
 }));
-const cookieStore = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn(), delete: vi.fn() }));
-vi.mock("next/headers", () => ({ cookies: vi.fn(async () => cookieStore) }));
-vi.mock("@logto/node/edge", () => ({
-  default: class {
-    constructor(
-      config: unknown,
-      private adapter: Adapter,
-    ) {
-      sdk.construct(config, adapter);
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({ get: mocks.get, set: mocks.set })),
+}));
+vi.mock("./session-manager", () => ({
+  SessionManager: class {
+    constructor(...args: unknown[]) {
+      mocks.construct(...args);
     }
-    signIn(options: unknown) {
-      return sdk.signIn(options, this.adapter);
-    }
-    handleSignInCallback(url: string) {
-      return sdk.callback(url, this.adapter);
-    }
-    signOut(returnTo: string) {
-      return sdk.signOut(returnTo, this.adapter);
-    }
-    getContext(options?: unknown) {
-      return sdk.context(this.adapter, options);
-    }
+    start = mocks.start;
+    complete = mocks.complete;
+    signOut = mocks.signOut;
+    context = mocks.context;
   },
 }));
-
+const now = 1_800_000_000_000;
+const sid = "s".repeat(43),
+  flow = "f".repeat(43);
+const db = {} as D1Database;
 const config = {
   appId: "fixture_app",
-  appSecret: "fixture-client-secret",
+  appSecret: "fixture-secret",
   endpoint: "https://fixture.logto.app",
   baseUrl: "https://login.loom-labs.ai",
-  cookieSecret: "fixture-cookie-key-at-least-32-characters-long",
+  cookieSecret: "fixture-key-at-least-thirty-two-characters",
   cookieSecure: true,
   cookieDomain: ".loom-labs.ai",
 };
-const cookies = new Map<string, string>();
-const expectedCookieOptions = {
+const cookieOptions = {
   domain: ".loom-labs.ai",
+  path: "/",
   httpOnly: true,
   secure: true,
   sameSite: "lax",
-  path: "/",
 };
-
-async function seedCookie(name: string, token = "fixture-id-token", key = config.cookieSecret) {
-  const storage = new CookieStorage({
-    cookieKey: name,
-    encryptionKey: key,
-    isSecure: true,
-    getCookie: () => undefined,
-    setCookie: (cookieName, value) => void cookies.set(cookieName, value),
-  });
-  await storage.init();
-  await storage.setItem(PersistKey.IdToken, token);
-}
-
+const options = {
+  redirectUri: `${config.baseUrl}/api/auth/callback`,
+  postRedirectUri: "https://www.loom-labs.ai/workspace?a=1",
+};
 beforeEach(() => {
   vi.resetAllMocks();
-  cookies.clear();
-  cookieStore.get.mockImplementation((name: string) => {
-    const value = cookies.get(name);
-    return value === undefined ? undefined : { name, value };
+  vi.useFakeTimers();
+  vi.setSystemTime(now);
+  mocks.start.mockResolvedValue({
+    url: "https://fixture.logto.app/oidc/auth",
+    flow: { id: flow, expiresAt: now + 600_000 },
   });
-  cookieStore.set.mockImplementation((name: string, value: string, options: CookieOptions) => {
-    if (options.maxAge === 0) cookies.delete(name);
-    else cookies.set(name, value);
+  mocks.complete.mockResolvedValue({
+    returnedUrl: options.postRedirectUri,
+    session: { id: sid, expiresAt: now + 14 * 86_400_000 },
   });
-  sdk.signIn.mockImplementation(async (_options: unknown, adapter: Adapter) => {
-    await adapter.storage.setItem(PersistKey.SignInSession, "fixture-state-and-pkce");
-    await adapter.navigate("https://fixture.logto.app/oidc/auth");
-  });
-  sdk.callback.mockImplementation(async (_url: string, adapter: Adapter) => {
-    await adapter.storage.setItem(PersistKey.IdToken, "fixture-id-token");
-    await adapter.navigate("https://www.loom-labs.ai/workspace?view=demo");
-  });
-  sdk.signOut.mockImplementation(async (_returnTo: string, adapter: Adapter) => {
-    await adapter.navigate("https://fixture.logto.app/oidc/session/end");
-  });
-  sdk.context.mockImplementation(async (adapter: Adapter) => {
-    const token = await adapter.storage.getItem(PersistKey.IdToken);
-    return token
-      ? { isAuthenticated: true, claims: { sub: "fixture-user", exp: 2_000_000_000 } }
-      : { isAuthenticated: false };
-  });
+  mocks.signOut.mockResolvedValue("https://fixture.logto.app/oidc/session/end");
+  mocks.context.mockResolvedValue({ isAuthenticated: false });
+  mocks.get.mockImplementation((name: string) => ({
+    value: name.includes("loom_sid_") ? sid : name.includes("loom_flow_") ? flow : "obsolete-jwt",
+  }));
 });
+afterEach(() => vi.useRealTimers());
 
-describe("shared Logto session cookie", () => {
-  it("uses a distinct secure name and delegates sign-in with real encrypted parent-domain storage", async () => {
-    expect(sessionCookieName(config)).toBe("__Secure-loom_session_fixture_app");
-    const options = {
-      redirectUri: "https://login.loom-labs.ai/api/auth/callback",
-      postRedirectUri: "https://www.loom-labs.ai/workspace?view=demo",
-      directSignIn: { method: "social" as const, target: "github" },
-    };
-    const result = await new LogtoSessionClient(config).handleSignIn(options);
-    expect(result).toEqual({ url: "https://fixture.logto.app/oidc/auth" });
-    expect(sdk.signIn).toHaveBeenCalledWith(options, expect.any(Object));
-    expect(sdk.construct.mock.calls[0]?.[1].storage).toBeInstanceOf(CookieStorage);
-    expect(cookieStore.set).toHaveBeenCalledWith(
-      "__Secure-loom_session_fixture_app",
-      expect.any(String),
-      expect.objectContaining(expectedCookieOptions),
-    );
-    expect(cookies.get("__Secure-loom_session_fixture_app")).not.toContain("fixture-state");
-
-    const adapter = sdk.construct.mock.calls[0]?.[1] as Adapter;
-    expect(await adapter.storage.getItem(PersistKey.SignInSession)).toBe("fixture-state-and-pkce");
-  });
-
-  it("uses a host-only development cookie without the Secure prefix", async () => {
-    const local = { ...config, baseUrl: "http://localhost:3001", cookieSecure: false };
-    delete (local as { cookieDomain?: string }).cookieDomain;
-    expect(sessionCookieName(local)).toBe("loom_session_fixture_app");
-    await new LogtoSessionClient(local).handleSignIn({
-      redirectUri: "http://localhost:3001/api/auth/callback",
+describe("opaque shared session cookie transport", () => {
+  it("starts a ten-minute flow without replacing an existing shared auth cookie", async () => {
+    expect(sessionCookieName(config)).toBe("__Secure-loom_sid_fixture_app");
+    expect(flowCookieName(config)).toBe("__Secure-loom_flow_fixture_app");
+    expect(await new LogtoSessionClient(config, db).handleSignIn(options)).toEqual({
+      url: "https://fixture.logto.app/oidc/auth",
     });
-    expect(cookieStore.set).toHaveBeenCalledWith(
-      "loom_session_fixture_app",
-      expect.any(String),
-      expect.objectContaining({ httpOnly: true, secure: false, path: "/", sameSite: "lax" }),
-    );
-    expect(cookieStore.set.mock.calls.at(-1)?.[2].domain).toBeUndefined();
-  });
-
-  it("delegates callback validation and persists the returned session with the shared domain", async () => {
-    const callback = "https://login.loom-labs.ai/api/auth/callback?code=fixture&state=fixture";
-    const result = await new LogtoSessionClient(config).handleSignInCallback(callback);
-    expect(result).toBe("https://www.loom-labs.ai/workspace?view=demo");
-    expect(sdk.callback).toHaveBeenCalledWith(callback, expect.any(Object));
-    expect(cookieStore.set).toHaveBeenCalledWith(
-      "__Secure-loom_session_fixture_app",
-      expect.any(String),
-      expect.objectContaining(expectedCookieOptions),
-    );
-    expect(await getLogtoContext(config)).toMatchObject({
-      isAuthenticated: true,
-      claims: { sub: "fixture-user" },
+    expect(mocks.construct).toHaveBeenCalledWith(config, db);
+    expect(mocks.start).toHaveBeenCalledWith(options, flow);
+    expect(mocks.set).toHaveBeenCalledExactlyOnceWith(flowCookieName(config), flow, {
+      ...cookieOptions,
+      expires: new Date(now + 600_000),
+      maxAge: 600,
     });
   });
-
-  it("reads the same parent-domain session from a sibling product with the same key", async () => {
-    await seedCookie(sessionCookieName(config));
-    const sibling = { ...config, baseUrl: "https://checkout.loom-labs.ai" };
-    expect(await new LogtoSessionClient(sibling).getContext()).toMatchObject({
-      isAuthenticated: true,
-      claims: { sub: "fixture-user" },
-    });
-    expect(cookieStore.set).not.toHaveBeenCalled();
+  it("writes only a new opaque ID on callback, with an absolute fourteen-day deadline", async () => {
     expect(
-      await getLogtoContext({
-        ...sibling,
-        cookieSecret: "other-fixture-key-at-least-32-characters",
-      }),
-    ).toEqual({
-      isAuthenticated: false,
+      await new LogtoSessionClient(config, db).handleSignInCallback(
+        "https://login.loom-labs.ai/api/auth/callback?code=x&state=y",
+      ),
+    ).toBe(options.postRedirectUri);
+    expect(mocks.complete).toHaveBeenCalledWith(flow, expect.stringContaining("code=x"));
+    expect(mocks.set).toHaveBeenCalledWith(sessionCookieName(config), sid, {
+      ...cookieOptions,
+      expires: new Date(now + 14 * 86_400_000),
+      maxAge: 1_209_600,
+    });
+    expect(mocks.set).toHaveBeenCalledWith(flowCookieName(config), "", {
+      ...cookieOptions,
+      expires: new Date(0),
+      maxAge: 0,
     });
   });
-
-  it("ignores the previous SDK host-only cookie even when it contains a valid encrypted identity", async () => {
-    await seedCookie("logto_fixture_app");
-    expect(await getLogtoContext(config)).toEqual({ isAuthenticated: false });
-    expect(cookieStore.get).not.toHaveBeenCalledWith("logto_fixture_app");
-    expect(cookieStore.set).not.toHaveBeenCalled();
+  it("expires the flow even when callback validation fails and never writes an auth ID", async () => {
+    mocks.get.mockReturnValue(undefined);
+    mocks.complete.mockRejectedValueOnce(new Error("invalid state"));
+    await expect(
+      new LogtoSessionClient(config, db).handleSignInCallback(options.redirectUri),
+    ).rejects.toThrow("invalid state");
+    expect(mocks.complete).toHaveBeenCalledWith("", options.redirectUri);
+    expect(mocks.set).toHaveBeenCalledExactlyOnceWith(
+      flowCookieName(config),
+      "",
+      expect.objectContaining({ maxAge: 0 }),
+    );
   });
-
-  it("does not write cookies while reading context, even if the SDK attempts a storage change", async () => {
-    await seedCookie(sessionCookieName(config));
-    sdk.context.mockImplementationOnce(async (adapter: Adapter) => {
-      await adapter.storage.setItem(PersistKey.IdToken, "fixture-refreshed-token");
-      return { isAuthenticated: true, claims: { sub: "fixture-user", exp: 2_000_000_000 } };
+  it("allows a verified callback with no saved destination", async () => {
+    mocks.complete.mockResolvedValueOnce({ session: { id: sid, expiresAt: now + 1000 } });
+    expect(
+      await new LogtoSessionClient(config, db).handleSignInCallback(options.redirectUri),
+    ).toBeUndefined();
+  });
+  it("uses local host-only cookies with no Secure prefix", async () => {
+    const { cookieDomain: _domain, ...rest } = config;
+    const local = { ...rest, cookieSecure: false, baseUrl: "http://localhost:3001" };
+    expect(sessionCookieName(local)).toBe("loom_sid_fixture_app");
+    await new LogtoSessionClient(local, db).handleSignIn(options);
+    expect(mocks.set.mock.calls[0]?.[2]).toMatchObject({ secure: false, httpOnly: true });
+    expect(mocks.set.mock.calls[0]?.[2]).not.toHaveProperty("domain");
+  });
+  it("reads the shared ID without reading legacy tokens or setting a cookie during RSC rendering", async () => {
+    mocks.context.mockResolvedValueOnce({
+      isAuthenticated: true,
+      claims: { sub: "u", exp: 2_000_000_000 },
     });
-    expect(await getLogtoContext(config)).toMatchObject({ isAuthenticated: true });
-    expect(cookieStore.set).not.toHaveBeenCalled();
+    expect(await getLogtoContext(config, db)).toMatchObject({ isAuthenticated: true });
+    expect(mocks.get).toHaveBeenCalledExactlyOnceWith(sessionCookieName(config));
+    expect(mocks.context).toHaveBeenCalledWith(sid);
+    expect(mocks.set).not.toHaveBeenCalled();
+    mocks.get.mockReturnValue(undefined);
+    await getLogtoContext(config, db);
+    expect(mocks.context).toHaveBeenLastCalledWith("");
   });
-
   it.each([false, true])(
-    "clears shared and legacy host-only cookies when SDK sign-out fails=%s",
-    async (fails) => {
-      await seedCookie(sessionCookieName(config));
-      await seedCookie("logto_fixture_app");
-      if (fails) sdk.signOut.mockRejectedValueOnce(new Error("fixture logout failure"));
-      const signOut = new LogtoSessionClient(config).handleSignOut("https://login.loom-labs.ai/");
-      if (fails) await expect(signOut).rejects.toThrow("fixture logout failure");
-      else await expect(signOut).resolves.toBe("https://fixture.logto.app/oidc/session/end");
-      expect(sdk.signOut).toHaveBeenCalledWith("https://login.loom-labs.ai/", expect.any(Object));
-      expect(cookieStore.set).toHaveBeenCalledWith(
+    "clears shared, flow and obsolete cookies even if database revocation fails=%s",
+    async (failure) => {
+      if (failure) mocks.signOut.mockRejectedValueOnce(new Error("db offline"));
+      const promise = new LogtoSessionClient(config, db).handleSignOut(config.baseUrl);
+      if (failure) await expect(promise).rejects.toThrow("db offline");
+      else await expect(promise).resolves.toBe("https://fixture.logto.app/oidc/session/end");
+      expect(mocks.signOut).toHaveBeenCalledWith(sid, flow, config.baseUrl);
+      for (const name of [
         sessionCookieName(config),
-        "",
-        expect.objectContaining({ ...expectedCookieOptions, maxAge: 0 }),
-      );
-      expect(cookieStore.set).toHaveBeenCalledWith(
+        flowCookieName(config),
+        "__Secure-loom_session_fixture_app",
+      ])
+        expect(mocks.set).toHaveBeenCalledWith(name, "", {
+          ...cookieOptions,
+          expires: new Date(0),
+          maxAge: 0,
+        });
+      expect(mocks.set).toHaveBeenCalledWith(
         "logto_fixture_app",
         "",
-        expect.objectContaining({ path: "/", maxAge: 0 }),
+        expect.not.objectContaining({ domain: expect.anything() }),
       );
-      const oldCookieDeletion = cookieStore.set.mock.calls.find(
-        ([name]) => name === "logto_fixture_app",
-      );
-      expect(oldCookieDeletion?.[2].domain).toBeUndefined();
-      expect(await getLogtoContext(config)).toEqual({ isAuthenticated: false });
+      mocks.get.mockReturnValue(undefined);
+      await new LogtoSessionClient(config, db).handleSignOut(config.baseUrl);
+      expect(mocks.signOut).toHaveBeenLastCalledWith("", "", config.baseUrl);
     },
   );
-
-  it("propagates SDK callback rejection without manufacturing an authenticated cookie", async () => {
-    sdk.callback.mockRejectedValueOnce(new Error("fixture invalid state"));
-    await expect(
-      new LogtoSessionClient(config).handleSignInCallback(
-        "https://login.loom-labs.ai/api/auth/callback",
-      ),
-    ).rejects.toThrow("fixture invalid state");
-    expect(cookieStore.set).not.toHaveBeenCalled();
-  });
-
-  it("rejects sign-in when the SDK does not provide its authorization destination", async () => {
-    sdk.signIn.mockResolvedValueOnce(undefined);
-    await expect(
-      new LogtoSessionClient(config).handleSignIn({
-        redirectUri: "https://login.loom-labs.ai/api/auth/callback",
-      }),
-    ).rejects.toThrow("Missing SDK sign-in navigation");
-  });
-
-  it("allows a verified callback with no post-sign-in destination", async () => {
-    sdk.callback.mockResolvedValueOnce(undefined);
-    await expect(
-      new LogtoSessionClient(config).handleSignInCallback(
-        "https://login.loom-labs.ai/api/auth/callback?code=fixture&state=fixture",
-      ),
-    ).resolves.toBeUndefined();
-  });
-
-  it("still clears the shared cookie when sign-out has no navigation destination", async () => {
-    await seedCookie(sessionCookieName(config));
-    sdk.signOut.mockResolvedValueOnce(undefined);
-    await expect(
-      new LogtoSessionClient(config).handleSignOut("https://login.loom-labs.ai/"),
-    ).rejects.toThrow("Missing SDK sign-out navigation");
-    expect(cookieStore.set).toHaveBeenCalledWith(
-      sessionCookieName(config),
-      "",
-      expect.objectContaining({ ...expectedCookieOptions, maxAge: 0 }),
-    );
-    expect(await getLogtoContext(config)).toEqual({ isAuthenticated: false });
-  });
 });

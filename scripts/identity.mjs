@@ -11,6 +11,7 @@ const commands = [
   ["test", "运行测试"],
   ["coverage", "运行测试与覆盖率检查"],
   ["check-crypto", "验证 Workers runtime 中的 JWT 签名"],
+  ["check-session", "验证 Workers runtime 中的官方 SDK 与续期传输"],
   ["smoke", "检查已启动的应用"],
   ["verify", "依次执行 Identity 的全部检查"],
   ["db-create", "创建远端 D1 数据库"],

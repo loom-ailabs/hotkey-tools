@@ -173,16 +173,15 @@ export function createAuthService({
 
   async function getAuthClient() {
     const { config, successUrl } = await getAuthSettings();
-    return { config, successUrl, client: new LogtoClient(config) };
+    return { config, successUrl, client: new LogtoClient(config, await getDatabase()) };
   }
 
   async function getUser(): Promise<IdentityUser | null> {
     const { config, userNamespace } = await getAuthSettings();
-    // The SDK validates the OIDC callback, then decodes claims from its encrypted cookie.
-    // Enforce token expiry here because reading that cookie does not revalidate expiry.
-    // Expired sessions must sign in again; this application does not silently refresh.
+    // D1 owns revocation and the absolute 14-day limit; the official SDK renews short tokens.
     // ID tokens are never accepted as bearer credentials for business APIs.
-    const { isAuthenticated, claims } = await getLogtoContext(config);
+    const database = await getDatabase();
+    const { isAuthenticated, claims } = await getLogtoContext(config, database);
     if (
       !isAuthenticated ||
       !claims?.sub ||
@@ -197,7 +196,6 @@ export function createAuthService({
       ...(typeof claims.name === "string" ? { name: claims.name } : {}),
       ...(typeof claims.email === "string" ? { email: claims.email } : {}),
     };
-    const database = await getDatabase();
     await database
       .prepare(
         `INSERT INTO users (id, issuer, subject, name, email, created_at)

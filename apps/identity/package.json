@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "check:crypto": "node scripts/check-jose-runtime.mjs",
+    "check:session": "node scripts/check-session-runtime.mjs",
     "start": "next start --port 3001",
     "cf:build": "node ../../scripts/check-worker-env.mjs && opennextjs-cloudflare build",
     "preview": "pnpm db:migrate:preview && pnpm cf:build && opennextjs-cloudflare preview --env preview --local --port 3001 --inspector-port 9301 --var APP_URL:http://localhost:3001 --var LOGIN_URL:http://localhost:3001 --var AUTH_SUCCESS_URL:http://localhost:3000/",

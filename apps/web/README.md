@@ -2,11 +2,13 @@
 
 `www.loom-labs.ai` 是独立 Next.js/OpenNext Worker，提供真实可刷新路径 `/`、`/vision`、`/pricing`、`/workspace` 与同源 API。工作区为固定示例计划，不调用真实模型，不使用 hash 路由。
 
-登录统一由 `login.loom-labs.ai` 发起，经 `auth.loom-labs.ai` 的 Logto 完成。WWW、checkout、login 使用同一 app ID、endpoint、原 identity Cookie 密钥与固定租户命名空间，共享 `Domain=.loom-labs.ai` 的 HttpOnly、Secure、SameSite=Lax Cookie。Cookie 新名称为 `__Secure-loom_session_<appId>`，旧主机 Cookie 不再读取；已有用户首次需重新登录。
+登录统一由 `login.loom-labs.ai` 发起，经 `auth.loom-labs.ai` 的 Logto 完成。WWW、checkout、login 使用同一 D1、app ID、endpoint、原 identity 密钥与固定租户命名空间。生产 Cookie `__Secure-loom_sid_<appId>` 只保存随机会话标识，设置 `Domain=.loom-labs.ai; Path=/; HttpOnly; Secure; SameSite=Lax`；SDK 令牌状态加密保存在 D1。10 分钟登录流程使用相同属性的 `__Secure-loom_flow_<appId>`。
+
+会话从成功回调起最多保留 14 天，刷新短期令牌不会延长该截止时间。服务端按需通过官方 SDK 自动刷新，并重新检查身份，页面和 RSC 不需要重写 Cookie。刷新结果不确定或租约过期时拒绝继续使用；清除 Cookie、退出或上游失效也可能在 14 天前要求登录。旧自包含父域 Cookie 和 `logto_<appId>` 主机 Cookie 不再接受，已有用户需一次重新登录；详见[会话生命周期](../../docs/session-lifecycle.md)。
 
 产品登录带完整 `returnTo` 路径和 query；已有有效会话时中央入口直接返回产品，匿名用户选择 Google/GitHub。只接受 HTTPS 的规范 `*.loom-labs.ai`，排除 login/auth、用户信息、非标准端口与 hash。无显式目标时，同产品 Referer 可保留初始未水合链接的路径；其他来源使用固定 `/workspace`。
 
-共享实现位于 `packages/identity-core`，通过官方 Node/edge SDK 与公开 CookieStorage 接入 Next cookies；WWW 不加载 Stripe SDK 或密钥。购买仍在 checkout，回到 WWW 后实时查询同一份 D1 权益。
+共享实现位于 `packages/identity-core`，通过官方 Node/edge SDK 处理 OIDC 与刷新，Next cookies 只读写随机标识；D1 是可撤销会话的权威存储。WWW 不加载 Stripe SDK 或密钥。购买仍在 checkout，回到 WWW 后实时查询同一份 D1 权益。
 
 ## 本地运行
 
@@ -28,13 +30,17 @@ mise run web:deploy-dry-run
 
 ## API 与部署
 
-JSON 统一 `{code:0,msg:"success",data}` / `{code:正整数,msg,error:{type}}`，均为 private/no-store 且 noindex。`GET /api/me` 返回 `{user:{id,name?,email?}|null,entitlements:{premium:boolean}}`。`GET /api/premium` 每次验证会话和 D1：匿名 401、无有效授权 403、有授权 200 `{unlocked:true,message}`。`POST /api/auth/logout` 只接受本产品准确 Origin，清共享 Cookie 并通过 Logto 退出；不因共享 Cookie 而放宽 CORS/CSRF。
+JSON 统一 `{code:0,msg:"success",data}` / `{code:正整数,msg,error:{type}}`，均为 private/no-store 且 noindex。`GET /api/me` 返回 `{user:{id,name?,email?}|null,entitlements:{premium:boolean}}`。`GET /api/premium` 每次验证会话和 D1：匿名 401、无有效授权 403、有授权 200 `{unlocked:true,message}`。`POST /api/auth/logout` 只接受本产品准确 Origin，先撤销 D1 共享会话，再尽力撤销上游令牌，finally 清 Cookie，最终 303 登出；不因共享 Cookie 而放宽 CORS/CSRF。当前 SID 的复制件在撤销后也失效，刷新或已知关联流程的迟到回调不能使其恢复；不宣称退出其他设备或撤销无关联的独立新授权。
 
-部署复用既有 Worker `vite-react-template` 与 WWW 自定义域。公开 Variables 包括 APP_URL、LOGIN_URL、AUTH_SUCCESS_URL、LOGTO_ENDPOINT、LOGTO_USER_NAMESPACE、LOGTO_APP_ID、LOGTO_COOKIE_DOMAIN；Secret 仅 LOGTO_APP_SECRET 和与 identity 相同的 LOGTO_COOKIE_SECRET，不包含 Stripe。真正 OIDC 回调只登记中央 `https://login.loom-labs.ai/api/auth/callback`，其他旧回调暂留登记但产品服务拒绝非中央主机回调。
+部署复用既有 Worker `vite-react-template` 与 WWW 自定义域。公开 Variables 包括 APP_URL、LOGIN_URL、AUTH_SUCCESS_URL、LOGTO_ENDPOINT、LOGTO_USER_NAMESPACE、LOGTO_APP_ID、LOGTO_COOKIE_DOMAIN；Secret 仅 LOGTO_APP_SECRET 和与 identity 相同的 LOGTO_COOKIE_SECRET，不包含 Stripe。后者作为 D1 状态加密的密钥派生输入保留。部署本轮代码前先由 identity 应用 `0002_sessions.sql`，两应用必须绑定同一份会话数据库。真正 OIDC 回调只登记中央 `https://login.loom-labs.ai/api/auth/callback`，其他旧回调暂留登记但产品服务拒绝非中央主机回调。
 
 父域会话发送给所有子域，须将其视为同一信任域。端到端验收仍须使用真实浏览器证明登录、跨产品识别、支付、退款撤权和共享退出；构建与合成 Cookie 运输测试各有独立证据边界。
 
-## 已完成的验收（2026-10-23）
+## 验证状态
+
+本轮 D1 会话已部署：WWW 版本为 `3b1091f9-a959-4352-91ac-54b6f0731811`，identity 为 `9e04b462-53e1-4660-8636-3c13139b00cc`，会话迁移已应用。400 项测试、全仓验证、实际 Workerd 协议检查与线上匿名 53/53 通过；真实 GitHub 三域同一身份、自动返回原路径和 query、官方 SDK 刷新及 WWW 退出后三域匿名已核对。受控缩短本轮测试会话截止时间后三域匿名，随后重登恢复同一身份；本地 Workerd 9 组最终复跑也通过，未宣称实际等待 14 天。细节见[会话生命周期](../../docs/session-lifecycle.md)。以下结果属于上一版自包含父域 Cookie，不作为本轮自动刷新证据。
+
+### 上一版本已完成的验收（2026-10-23）
 
 本轮已发布至既有 WWW Worker，版本为 `c7fbf7c8-c45a-45e5-b6d2-7ae7c15a0b85`；登录与购买 Worker 版本为 `a4224f5a-c2f1-427f-87c5-2fb94f03cce2`。
 

@@ -97,8 +97,8 @@ for (const provider of ["google", "github"]) {
       "Shared cookie must use the parent domain",
     );
     assert.ok(
-      cookie.startsWith("__Secure-loom_session_"),
-      "Shared cookie must use its new secure name",
+      cookie.startsWith("__Secure-loom_flow_"),
+      "Sign-in must issue a distinct short-lived opaque flow ID",
     );
   } else assert.ok(!/(?:^|;)\s*Domain=/i.test(cookie), "Localhost cookies must omit Domain");
   checks.push({
@@ -113,9 +113,9 @@ await api("/api/auth/callback?code=forged&state=forged", 400);
 const invalid = await fetch(new URL("/api/auth/callback?code=forged&state=forged", loginBase), {
   redirect: "manual",
 });
-assert.equal(invalid.status, 503);
-assert.equal((await invalid.json()).error.type, "service_unavailable");
-checks.push({ path: "central/api/auth/callback", status: 503 });
+assert.equal(invalid.status, 400);
+assert.equal((await invalid.json()).error.type, "invalid_auth_callback");
+checks.push({ path: "central/api/auth/callback", status: 400 });
 console.log(
   JSON.stringify({ mode: "anonymous-http-smoke", baseUrl: baseUrl.origin, checks }, null, 2),
 );

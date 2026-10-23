@@ -119,9 +119,17 @@ export function createAuthRoutes({
   async function logout(request: Request) {
     try {
       const env = await getEnv();
-      requireSameOrigin(request, env.APP_URL ?? "");
+      const origin = new URL(request.url).origin;
+      // Identity serves both configured hosts, but each write still requires its exact Origin.
+      const expected =
+        env.LOGIN_URL && origin === new URL(env.LOGIN_URL).origin
+          ? env.LOGIN_URL
+          : (env.APP_URL ?? "");
+      requireSameOrigin(request, expected);
+      if (origin !== new URL(expected).origin)
+        throw new ApiError(403, "invalid_origin", "请求来源不受信任。");
       const { client } = await getAuthClient();
-      const url = await client.handleSignOut(new URL("/", env.APP_URL).toString());
+      const url = await client.handleSignOut(new URL("/", expected).toString());
       return NextResponse.redirect(url, { status: 303, headers: privateHeaders });
     } catch (error) {
       return jsonError(error);

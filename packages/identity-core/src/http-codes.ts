@@ -9,6 +9,8 @@ export const HTTP_ERROR_CODES = {
   sandbox_required: 1004,
   invalid_price_configuration: 1005,
   invalid_app_url: 1006,
+  session_renewal_failed: 1007,
+  session_busy: 1008,
   invalid_origin: 2001,
   unauthenticated: 2002,
   premium_required: 2003,

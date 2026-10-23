@@ -2,7 +2,7 @@
 
 本应用将页面、登录回调、订单 API、Stripe Webhook 和付费鉴权放在同一个 Next.js App Router 服务中，通过 OpenNext 部署到一个 Cloudflare Worker。首版只提供一个产品的一次性购买示例：`hotkey-tools` / `premium-demo`；不包含订阅、用量计费或独立身份签发服务。
 
-Logto 负责认证，D1 保存用户、订单和权益，Stripe Sandbox 负责测试付款。付费权限由业务数据库判断，不依赖 Logto 的 RBAC 或自定义 API resources。开发租户可用功能不能代替生产 Free 套餐的验证。
+Logto 负责认证和短期令牌刷新，D1 保存可撤销会话、用户、订单和权益，Stripe Sandbox 负责测试付款。付费权限由业务数据库判断，不依赖 Logto 的 RBAC 或自定义 API resources。开发租户可用功能不能代替生产 Free 套餐的验证。
 
 ## 本地启动
 
@@ -23,6 +23,7 @@ mise identity build             # Next.js 构建 + OpenNext/Workers 产物
 mise identity preview           # 本地 Workers runtime，端口 3001
 mise identity test
 mise identity coverage
+mise identity check-session     # 真实 SDK 的 Workerd 协议运行时验证
 mise identity verify            # 类型、lint、覆盖率、JWT 运行时、构建与打包
 mise identity deploy-dry-run    # 实际构建和打包，不发布
 mise identity wrangler --version
@@ -49,7 +50,7 @@ Wrangler CLI 由 mise 安装并固定版本；OpenNext 的 Node API 与运行时
 | `LOGTO_APP_ID`          | Logto Traditional web 应用 ID                                                                                                        | 本地环境文件；远端 Worker Variable |
 | `LOGTO_APP_SECRET`      | 同一应用的客户端密钥                                                                                                                 | 仅 `.dev.vars`；远端 Worker Secret |
 | `LOGTO_COOKIE_DOMAIN`   | 生产固定 `.loom-labs.ai`；本地 localhost 留空                                                                                        | 本地公开配置；远端 Worker Variable |
-| `LOGTO_COOKIE_SECRET`   | 至少 32 字符的随机会话加密密钥；重启和重新部署时保持稳定                                                                             | 仅 `.dev.vars`；远端 Worker Secret |
+| `LOGTO_COOKIE_SECRET`   | 至少 32 字符的随机密钥输入，用于派生 D1 会话状态加密密钥；共享应用、重启和重新部署时保持一致                                         | 仅 `.dev.vars`；远端 Worker Secret |
 | `STRIPE_SECRET_KEY`     | 与商品、Price、Webhook 同一 Sandbox 的 `sk_test_` 密钥                                                                               | 仅 `.dev.vars`；远端 Worker Secret |
 | `STRIPE_WEBHOOK_SECRET` | 当前回调目标对应的 `whsec_` 签名密钥；CLI 转发与远端 endpoint 的密钥不同                                                             | 仅 `.dev.vars`；远端 Worker Secret |
 | `STRIPE_PRICE_ID`       | Sandbox 中启用的、金额大于零的一次性固定 Price                                                                                       | 本地环境文件；远端 Worker Variable |
@@ -68,7 +69,7 @@ Wrangler CLI 由 mise 安装并固定版本；OpenNext 的 Node API 与运行时
 | Redirect URI               | `${LOGIN_URL}/api/auth/callback` |
 | Post sign-out redirect URI | `${APP_URL}/`                    |
 
-本地和远端回调分别登记。SDK 的 baseUrl 统一使用 `LOGIN_URL`，生产回调为 `https://login.loom-labs.ai/api/auth/callback`，不从 Host 推导。产品 `/api/auth/login` 303 到中央登录页；`returnTo` 仅允许 HTTPS 规范 `*.loom-labs.ai`，排除 login/auth、userinfo、非标准端口及 hash，保留路径和原 query。已有有效共享会话直接回产品；匿名用户使用固定 Google/GitHub provider。目标保存在官方 SDK 加密登录会话中，回调验证 state、PKCE、issuer、audience 和签名后再验证目标。旧 `destination=website|checkout` 仅兼容固定目标，未知或重复参数拒绝。客户端不能指定任意 IdP target。
+本地和远端回调分别登记。SDK 的 baseUrl 统一使用 `LOGIN_URL`，生产回调为 `https://login.loom-labs.ai/api/auth/callback`，不从 Host 推导。产品 `/api/auth/login` 303 到中央登录页；`returnTo` 仅允许 HTTPS 规范 `*.loom-labs.ai`，排除 login/auth、userinfo、非标准端口及 hash，保留路径和原 query。已有有效共享会话直接回产品；匿名用户使用固定 Google/GitHub provider。目标保存在 D1 中加密的官方 SDK 登录状态中，浏览器只持有 10 分钟流程标识；回调验证 state、PKCE、issuer、audience 和签名后再验证目标。旧 `destination=website|checkout` 仅兼容固定目标，未知或重复参数拒绝。客户端不能指定任意 IdP target。
 
 ### 自定义域名与原用户归属
 
@@ -84,7 +85,9 @@ LOGTO_USER_NAMESPACE=https://kpy72v.logto.app
 
 `login.loom-labs.ai` 与 `checkout.loom-labs.ai` 绑定本 Worker：前者展示统一登录页、发起与接收唯一 OIDC 回调，后者展示账户和购买页。`auth.loom-labs.ai` 是 Logto 托管认证，`www.loom-labs.ai` 由 apps/web 提供产品页面。所有产品进入 login，并携带经校验的完整 returnTo 路径及 query；有效共享会话直接回产品。Google/GitHub 的上游 connector 回调仍登记 Logto auth 域，不能与本应用 login 回调混淆。
 
-会话通过官方 `@logto/node/edge` 与公开 CookieStorage 接入 Next cookies；Next SDK 当前没有 Domain/cookieName 配置，因此该适配只负责 Cookie 运输，协议验证仍由官方 SDK 完成。生产新 Cookie `__Secure-loom_session_<appId>` 设置 `Domain=.loom-labs.ai`、Path=/、HttpOnly、Secure、SameSite=Lax，WWW/checkout/login 共用原 identity key、app ID、endpoint 与 namespace。旧 host-only `logto_<appId>` 不再接受，避免同名遮蔽，用户首次重新登录。退出精确删除共享 Domain/Path，并清当前 host 旧 Cookie。父域 Cookie 会到达所有子域，应视为同一信任域。Stripe Webhook 继续原文验签，不受登录跳转影响；支付后固定返回 `https://www.loom-labs.ai/workspace`。
+协议验证与刷新由官方 `@logto/node/edge` 完成；Next cookies 只运输随机标识。生产会话 Cookie 为 `__Secure-loom_sid_<appId>`，流程 Cookie 为 `__Secure-loom_flow_<appId>`，均设置 `Domain=.loom-labs.ai; Path=/; HttpOnly; Secure; SameSite=Lax`。WWW/checkout/login 共用 D1、原 identity key、app ID、endpoint 与 namespace；令牌和 SDK 状态加密保存在 D1。父域 Cookie 会到达所有子域，应视为同一信任域。Stripe Webhook 继续原文验签，不受登录跳转影响；支付后固定返回 `https://www.loom-labs.ai/workspace`。
+
+这次从自包含 Cookie 切换到 D1 会话：旧 `__Secure-loom_session_<appId>` 和 host-only `logto_<appId>` 均不再作为登录依据，已有用户需要一次重新登录。退出清理同 Domain/Path 的新旧父域 Cookie，以及当前 host 的旧 Cookie。原 `LOGTO_COOKIE_SECRET` 保留为服务端密钥派生输入，不能将其写入浏览器。
 
 同一个 Logto 租户切换访问域名时，必须保持 `LOGTO_APP_ID`、Cookie 密钥及 `LOGTO_USER_NAMESPACE` 稳定。现有用户的 `users.issuer` 已保存原 endpoint，因此本租户固定为 `https://kpy72v.logto.app`，无需改写数据库或重新关联订单。该字段现在表示固定的本地身份命名空间；实际 OIDC issuer 仍由 SDK 从当前 endpoint 的 discovery 获取并校验。命名空间只能用于同一个已确认租户，不能用于自动合并其他租户；不按邮箱匹配用户。未固定命名空间而直接换域可能触发用户主键冲突，应用会拒绝请求。
 
@@ -113,9 +116,13 @@ Google 官方基本资料授权成功，并返回 auth 域 connector 回调，�
 
 ### 会话边界
 
-官方 SDK 在回调阶段验证登录流程，随后使用加密的 HttpOnly、SameSite=Lax Cookie 保存会话；正式 HTTPS origin 开启 Secure。没有额外的 `sessions` 表。后续 API 会在服务端检查身份声明的 `exp`，过期、缺失或异常时视为未登录；本期不做静默续期，需重新登录。
+成功回调创建固定 14 天的 D1 应用会话，截止时间不随访问或令牌刷新延长。登录中的流程状态只有 10 分钟。`auth_sessions` 只保存随机 SID 的 SHA-256 哈希与 HKDF/AES-GCM 加密的 SDK 状态；浏览器不持有 ID、access 或 refresh token。
 
-应用使用稳定的 `(租户命名空间, subject)` 记录用户，前者保存在 `users.issuer`，不以邮箱关联购买。ID Token 不作为通用业务 API 的 bearer token。退出登录仅接受同源 POST，清除应用会话并通过 303 转到 Logto 登出流程。共享 Cookie 删除后各产品后续请求失去会话；尚未接入控制台禁用用户的远程回通道，不能声称已复制的 Cookie 会立即被服务器吊销。
+请求先检查 D1 会话未到期、未撤销，再读取身份声明。身份令牌或 access token 剩余有效期不超过 60 秒，或 access token 缓存缺失、异常时，服务端通过官方 SDK 的 `clearAccessToken()` / `getAccessToken()` 刷新，重新读取并校验身份；RSC 无需写 Cookie。跨 Worker 刷新使用 D1 `first-primary`、版本比较更新及 30 秒租约，每个 SDK 请求最多 5 秒，协议操作总计最多 20 秒。等待活跃租约超出上限返回 `session_busy`；租约过期或刷新结果不确定时撤销会话，避免重放可能已消耗的 refresh token。
+
+退出登录仅接受准确同源的 POST，先撤销 D1 中当前会话及关联流程，再由 SDK 尽力撤销上游 refresh token；适配层在 finally 中清除 Cookie，最终以 303 执行 Logto 登出。已撤销 SID 的复制件不能在后续请求中恢复会话；并发刷新和已知关联流程的迟到回调也不能重新启用它。统一退出作用于当前 Cookie 标识的共享会话与流程，不是用户所有设备，也不撤销无关联的独立新授权；已开始执行的业务操作不会被倒退取消。
+
+14 天是应用允许的最长绝对期限，不是无条件免登录承诺。清除 Cookie、主动退出、上游令牌失效、密钥或 endpoint 变化，以及安全异常都可能提前要求重新登录。尚未接入 Logto 控制台禁用用户的实时回通道。应用使用稳定的 `(租户命名空间, subject)` 记录用户，不以邮箱关联购买；ID Token 不作为通用业务 API 的 bearer token。详细设计、迁移与验证边界见[会话生命周期](../../docs/session-lifecycle.md)。
 
 ## Stripe Sandbox 单次购买
 
@@ -168,7 +175,9 @@ mise identity preview
 
 中央登录预览为 `http://localhost:3001`，WWW 为 `http://localhost:3000`。两应用本地使用相同 Cookie key 和 localhost（Domain 留空），统一 LOGIN_URL=localhost:3001、AUTH_SUCCESS_URL=localhost:3000。预览清空生产 routes，不放宽正式准确 Origin 检查；真实本地 OAuth 需登记中央 localhost:3001 回调。
 
-2026-10-23 的父域共享会话版本已上线：登录与购买 Worker 为 `a4224f5a-c2f1-427f-87c5-2fb94f03cce2`，WWW 为 `c7fbf7c8-c45a-45e5-b6d2-7ae7c15a0b85`。全仓验证、本地 Workerd 和 60 项线上匿名检查通过；真实 GitHub 三域共享登录、有效会话返回原产品、共享退出、USD 1.00 Sandbox 付款后主站运行、退出重登持权，以及全额退款后原会话拒绝访问均已完成。最终有效权益为 0；旧有两项 pending 购买意图未改动。浏览器和订单证据分别为 `shared-domain-browser-e2e.json` 与 `shared-domain-billing.json`，完整步骤与对象清单见[飞书操作记录](https://bytedance.larkoffice.com/docx/O5IUdAY2bon0L1x72gucn73NnOh)。
+本轮 D1 会话与自动刷新已部署：identity 为 `9e04b462-53e1-4660-8636-3c13139b00cc`，WWW 为 `3b1091f9-a959-4352-91ac-54b6f0731811`，`0002_sessions.sql` 已应用。core 239、identity 137、WWW 24，共 400 项测试通过；core 覆盖率为 statements 98.17%、branches 95.47%、functions 100%、lines 98.75%。全仓验证、实际 Workerd 协议检查、线上匿名 53/53，以及真实 GitHub 三域共享登录、有效会话直接返回、官方 SDK 刷新和共享退出均已通过。受控缩短本轮测试会话截止时间后，三域拒绝继续认证且 D1 撤销清密文，随后 GitHub 重登恢复同一身份；不将此称为真实等待 14 天。本地 Workerd 9 组最终复跑通过。证据及最新边界见[会话生命周期](../../docs/session-lifecycle.md)。
+
+以下是 2026-10-23 上一版自包含父域 Cookie 的真实记录：登录与购买 Worker 为 `a4224f5a-c2f1-427f-87c5-2fb94f03cce2`，WWW 为 `c7fbf7c8-c45a-45e5-b6d2-7ae7c15a0b85`。全仓验证、本地 Workerd 和 60 项线上匿名检查通过；真实 GitHub 三域共享登录、有效会话返回原产品、共享退出、USD 1.00 Sandbox 付款后主站运行、退出重登持权，以及全额退款后原会话拒绝访问均已完成。最终有效权益为 0；旧有两项 pending 购买意图未改动。浏览器和订单证据分别为 `shared-domain-browser-e2e.json` 与 `shared-domain-billing.json`，完整步骤与对象清单见[飞书操作记录](https://bytedance.larkoffice.com/docx/O5IUdAY2bon0L1x72gucn73NnOh)。
 
 以下是此前独立会话方案的历史记录，不作为本轮父域共享会话的验收依据：当时域名方案已通过全仓 `mise run verify` 和 182 项测试；核心服务端/API 覆盖率为 statements 98.57%、branches 98.06%、functions 100%、lines 99.39%。Workers 本地预览、本地 D1 smoke、远端 D1 健康检查和 9 项匿名边界检查已通过。
 
@@ -178,7 +187,7 @@ mise identity preview
 
 适配 Logto SDK 时，Next.js 构建曾选择 jose 的 Node 导出，导致本次 Workerd 环境的 ES384 验签不兼容。现将直接依赖固定为 `jose@5.10.0`，开发与构建显式使用 webpack，并将精确的 `jose$` alias 指向该库官方 WebCrypto 导出；SDK 的签名、issuer 和 audience 校验保持启用。`scripts/check-jose-runtime.mjs` 已在 Workerd 验证合法 ES384 签名、篡改签名、错误 issuer、错误 audience 四项行为。该修复针对本次依赖与构建路径，不表示 Cloudflare 全面不支持 Node crypto。
 
-真实联调至少检查：登录后 `/api/me` 取得当前用户；未登录访问高级接口为 401、未购买为 403；付款后关闭页面仍由 Webhook 开通；伪造成功页不能开通；重复事件不重复授予权益；成功全额退款撤回对应订单权益；会话过期要求重新登录。
+真实联调至少检查：登录后 `/api/me` 取得当前用户；未登录访问高级接口为 401、未购买为 403；付款后关闭页面仍由 Webhook 开通；伪造成功页不能开通；重复事件不重复授予权益；成功全额退款撤回对应订单权益。会话还须检查跨产品自动刷新、刷新失败拒绝访问、退出后 SID 重放、并发刷新/退出，以及固定第 14 天边界；时间推进与合成协议测试不能称为真实等待 14 天的验证。
 
 ## Cloudflare 部署
 
@@ -209,7 +218,7 @@ mise identity wrangler secret put STRIPE_SECRET_KEY
 mise identity wrangler secret put STRIPE_WEBHOOK_SECRET
 ```
 
-本应用 APP_URL 为 checkout，WWW 的 APP_URL 为 www，仅用于各自页面/API 与准确 Origin 检查。两应用 SDK baseUrl 统一 LOGIN_URL=login，OIDC 回调仅在 login；共享 Cookie Domain=.loom-labs.ai、app ID、原 identity key、endpoint 和 namespace 全部一致。Stripe endpoint 继续指向 checkout，付款和退款协议不变。之后运行：
+本应用 APP_URL 为 checkout，WWW 的 APP_URL 为 www，仅用于各自页面/API 与准确 Origin 检查。两应用 SDK baseUrl 统一 LOGIN_URL=login，OIDC 回调仅在 login；共享 Cookie Domain=.loom-labs.ai、D1、app ID、原 identity key、endpoint 和 namespace 全部一致。先应用 `0002_sessions.sql`，再部署两应用，避免新版本缺少会话表；旧 Cookie 不会迁移，需一次重新登录。Stripe endpoint 继续指向 checkout，付款和退款协议不变。之后运行：
 
 ```bash
 mise identity deploy
@@ -219,14 +228,14 @@ mise identity deploy
 
 ## 数据与接口
 
-迁移文件为 `migrations/0001_identity.sql`，包含 `users`、`orders`、`entitlements`、`stripe_events` 四张表。后续新增 migration，不修改已应用的文件。本地和远端数据库相互独立；不要将远端资源误当成本地测试库。
+`migrations/0001_identity.sql` 包含 `users`、`orders`、`entitlements`、`stripe_events`；`0002_sessions.sql` 新增 `auth_sessions`，保存加密 SDK 状态、固定截止时间、撤销标记、刷新版本/租约与流程关联。后续新增 migration，不修改已应用的文件。本地和远端数据库相互独立；不要将远端资源误当成本地测试库。
 
 | 路由                        | 行为                                                     |
 | --------------------------- | -------------------------------------------------------- |
 | `GET /api/health`           | 检查 D1 binding 和迁移后的表                             |
 | `GET /api/auth/login`       | 产品跳中央页；中央允许固定 provider 和受信 returnTo      |
 | `GET /api/auth/callback`    | SDK 校验后仅返回受信产品路径与 query，拒绝 hash          |
-| `POST /api/auth/logout`     | 同源登出，清除会话后 303 跳转                            |
+| `POST /api/auth/logout`     | 同源；D1 撤销会话、清 Cookie，再 303 登出                |
 | `GET /api/me`               | 当前用户与 `{ premium }` 权益；匿名用户返回 `user: null` |
 | `POST /api/checkout`        | 同源、已登录；创建或恢复该用户的购买尝试                 |
 | `GET /api/orders/:id`       | 仅返回当前用户的订单                                     |

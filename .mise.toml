@@ -102,6 +102,7 @@ run = [
   "pnpm lint",
   "pnpm format:check",
   "pnpm test",
+  "pnpm --filter @hotkey-tools/identity check:session",
   "pnpm build",
   "pnpm run deploy:dry-run",
 ]
@@ -190,6 +191,10 @@ run = "pnpm --filter @hotkey-tools/identity test:coverage"
 description = "在 Workers runtime 验证 JWT 签名及拒绝路径"
 run = "pnpm --filter @hotkey-tools/identity check:crypto"
 
+[tasks."identity:check-session"]
+description = "在 Workers runtime 验证官方 SDK 登录和续期传输的重定向隔离"
+run = "pnpm --filter @hotkey-tools/identity check:session"
+
 [tasks."identity:smoke"]
 description = "检查已启动的 Identity 页、D1 与 HTTP API"
 run = "node scripts/smoke-identity.mjs"
@@ -201,6 +206,7 @@ run = [
   "\"{{mise_bin}}\" run identity:lint",
   "\"{{mise_bin}}\" run identity:coverage",
   "\"{{mise_bin}}\" run identity:check-crypto",
+  "\"{{mise_bin}}\" run identity:check-session",
   "\"{{mise_bin}}\" run identity:deploy-dry-run",
 ]
 

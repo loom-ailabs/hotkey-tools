@@ -1,7 +1,7 @@
 import "server-only";
-import NodeClient from "@logto/node/edge";
-import { CookieStorage, type LogtoConfig, type SignInOptions } from "@logto/node";
+import type { LogtoConfig, SignInOptions } from "@logto/node";
 import { cookies } from "next/headers";
+import { SessionManager } from "./session-manager";
 
 export type SessionConfig = LogtoConfig & {
   baseUrl: string;
@@ -9,80 +9,79 @@ export type SessionConfig = LogtoConfig & {
   cookieSecure: boolean;
   cookieDomain?: string;
 };
+const prefix = (config: SessionConfig) => (config.cookieSecure ? "__Secure-" : "");
+export const sessionCookieName = (config: SessionConfig) =>
+  `${prefix(config)}loom_sid_${config.appId}`;
+export const flowCookieName = (config: SessionConfig) =>
+  `${prefix(config)}loom_flow_${config.appId}`;
 
-export const sessionCookieName = (config: SessionConfig): string =>
-  `${config.cookieSecure ? "__Secure-" : ""}loom_session_${config.appId}`;
-
-/** Transport adapter only; the official client owns every OAuth/OIDC check. */
+/** Next.js only transports opaque identifiers; OAuth material stays encrypted in D1. */
 export default class LogtoSessionClient {
-  constructor(private readonly config: SessionConfig) {}
+  private readonly manager: SessionManager;
+  constructor(
+    private readonly config: SessionConfig,
+    database: D1Database,
+  ) {
+    this.manager = new SessionManager(config, database);
+  }
 
-  private async open(readOnly = false) {
-    const cookieStore = await cookies();
-    const domain = this.config.cookieDomain ? { domain: this.config.cookieDomain } : {};
-    const storage = new CookieStorage({
-      encryptionKey: this.config.cookieSecret,
-      cookieKey: sessionCookieName(this.config),
-      isSecure: this.config.cookieSecure,
-      getCookie: (name) => cookieStore.get(name)?.value,
-      setCookie: (name, value, options) => {
-        if (!readOnly) cookieStore.set(name, value, { ...options, ...domain });
-      },
-    });
-    await storage.init();
-    let navigateUrl: string | undefined;
-    const client = new NodeClient(this.config, {
-      storage,
-      navigate: (url) => {
-        navigateUrl = url;
-      },
-    });
-    return { client, cookieStore, getNavigateUrl: () => navigateUrl, domain };
+  private options(expiresAt: number) {
+    return {
+      path: "/",
+      httpOnly: true,
+      secure: this.config.cookieSecure,
+      sameSite: "lax" as const,
+      ...(this.config.cookieDomain ? { domain: this.config.cookieDomain } : {}),
+      expires: new Date(expiresAt),
+      maxAge: Math.max(0, Math.floor((expiresAt - Date.now()) / 1_000)),
+    };
   }
 
   async handleSignIn(options: SignInOptions): Promise<{ url: string }> {
-    const { client, getNavigateUrl } = await this.open();
-    await client.signIn(options);
-    const url = getNavigateUrl();
-    if (!url) throw new Error("Missing SDK sign-in navigation");
+    const store = await cookies();
+    const { url, flow } = await this.manager.start(
+      options,
+      store.get(flowCookieName(this.config))?.value ?? "",
+    );
+    store.set(flowCookieName(this.config), flow.id, this.options(flow.expiresAt));
     return { url };
   }
 
   async handleSignInCallback(callbackUrl: string): Promise<string | undefined> {
-    const { client, getNavigateUrl } = await this.open();
-    await client.handleSignInCallback(callbackUrl);
-    return getNavigateUrl();
+    const store = await cookies();
+    const flowId = store.get(flowCookieName(this.config))?.value ?? "";
+    try {
+      const { session, returnedUrl } = await this.manager.complete(flowId, callbackUrl);
+      store.set(sessionCookieName(this.config), session.id, this.options(session.expiresAt));
+      return returnedUrl;
+    } finally {
+      store.set(flowCookieName(this.config), "", this.options(0));
+    }
   }
 
   async handleSignOut(returnTo: string): Promise<string> {
-    const { client, cookieStore, getNavigateUrl, domain } = await this.open();
+    const store = await cookies();
     try {
-      await client.signOut(returnTo);
+      return await this.manager.signOut(
+        store.get(sessionCookieName(this.config))?.value ?? "",
+        store.get(flowCookieName(this.config))?.value ?? "",
+        returnTo,
+      );
     } finally {
-      const options = {
-        path: "/",
-        httpOnly: true,
-        secure: this.config.cookieSecure,
-        sameSite: "lax" as const,
-        maxAge: 0,
-        expires: new Date(0),
-      };
-      // Domain/Path must match creation. Expire the obsolete host-only SDK cookie
-      // on the current host too; it is never accepted as the new shared session.
-      cookieStore.set(sessionCookieName(this.config), "", { ...options, ...domain });
-      cookieStore.set(`logto_${this.config.appId}`, "", options);
+      const legacy = `${prefix(this.config)}loom_session_${this.config.appId}`;
+      for (const name of [sessionCookieName(this.config), flowCookieName(this.config), legacy])
+        store.set(name, "", this.options(0));
+      const { domain: _domain, ...hostOnly } = this.options(0);
+      store.set(`logto_${this.config.appId}`, "", hostOnly);
     }
-    const url = getNavigateUrl();
-    if (!url) throw new Error("Missing SDK sign-out navigation");
-    return url;
   }
 
   async getContext() {
-    const { client } = await this.open(true);
-    return client.getContext();
+    const id = (await cookies()).get(sessionCookieName(this.config))?.value ?? "";
+    return this.manager.context(id);
   }
 }
 
-export async function getLogtoContext(config: SessionConfig) {
-  return new LogtoSessionClient(config).getContext();
+export async function getLogtoContext(config: SessionConfig, database: D1Database) {
+  return new LogtoSessionClient(config, database).getContext();
 }

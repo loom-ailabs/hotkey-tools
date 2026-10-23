@@ -49,6 +49,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.getEnv.mockResolvedValue({ ...configuredEnv });
   mocks.getContext.mockResolvedValue({ isAuthenticated: false });
+  mocks.getDatabase.mockResolvedValue({ prepare: vi.fn() });
   mocks.signIn.mockResolvedValue({ url: "https://identity.example.com/oidc/auth" });
   mocks.callback.mockResolvedValue(undefined);
   mocks.signOut.mockResolvedValue("https://identity.example.com/oidc/session/end");
@@ -173,12 +174,12 @@ describe("Logto configuration and identity", () => {
     expect(await getLogtoConfig()).toMatchObject({ cookieSecure: false });
   });
 
-  it("does not access the user database for a signed-out request", async () => {
+  it("does not update user records for a signed-out request", async () => {
     expect(await getUser()).toBeNull();
-    expect(mocks.getDatabase).not.toHaveBeenCalled();
+    expect((await mocks.getDatabase()).prepare).not.toHaveBeenCalled();
   });
 
-  it("rejects missing, malformed and expired claim timestamps before accessing storage", async () => {
+  it("rejects missing, malformed and expired claim timestamps before updating users", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-22T12:00:00.900Z"));
     const now = Math.floor(Date.now() / 1000);
@@ -190,7 +191,7 @@ describe("Logto configuration and identity", () => {
       });
       expect(await getUser()).toBeNull();
     }
-    expect(mocks.getDatabase).not.toHaveBeenCalled();
+    expect((await mocks.getDatabase()).prepare).not.toHaveBeenCalled();
   });
 
   it("accepts the final valid second and rejects the same cookie at the expiry boundary", async () => {
@@ -210,7 +211,7 @@ describe("Logto configuration and identity", () => {
 
     vi.advanceTimersByTime(100);
     expect(await getUser()).toBeNull();
-    expect(mocks.getDatabase).toHaveBeenCalledOnce();
+    expect(mocks.getDatabase).toHaveBeenCalledTimes(2);
   });
 
   it("stores the verified subject and issuer rather than using email as the user key", async () => {
@@ -242,6 +243,6 @@ describe("Logto configuration and identity", () => {
       expect.any(Number),
     );
     expect(run).toHaveBeenCalledOnce();
-    expect(mocks.getContext).toHaveBeenCalledWith(expect.any(Object));
+    expect(mocks.getContext).toHaveBeenCalledWith(expect.any(Object), expect.any(Object));
   });
 });
