@@ -1,5 +1,6 @@
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
@@ -9,7 +10,7 @@ const joseWebCrypto = join(dirname(require.resolve("jose/package.json")), "dist/
 initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@hotkey-tools/ui"],
+  transpilePackages: ["@hotkey-tools/ui", "@hotkey-tools/identity-core", "@hotkey-tools/i18n"],
   images: { unoptimized: true },
   webpack(config) {
     // Next's Node build otherwise selects jose's Node export before OpenNext can
@@ -20,4 +21,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default createNextIntlPlugin("./src/i18n/request.ts")(nextConfig);

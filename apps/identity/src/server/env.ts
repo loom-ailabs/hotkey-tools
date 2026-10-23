@@ -12,6 +12,7 @@ export type IdentityEnv = {
   LOGTO_APP_ID?: string;
   LOGTO_APP_SECRET?: string;
   LOGTO_COOKIE_SECRET?: string;
+  LOGTO_COOKIE_DOMAIN?: string;
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_PRICE_ID?: string;
@@ -30,6 +31,7 @@ const variableNames = [
   "LOGTO_APP_ID",
   "LOGTO_APP_SECRET",
   "LOGTO_COOKIE_SECRET",
+  "LOGTO_COOKIE_DOMAIN",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_PRICE_ID",

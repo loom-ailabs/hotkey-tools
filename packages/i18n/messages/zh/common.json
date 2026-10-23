@@ -1,0 +1,11 @@
+{
+  "language": "语言",
+  "chinese": "中文",
+  "english": "English",
+  "theme": "外观",
+  "light": "浅色",
+  "dark": "深色",
+  "system": "跟随系统",
+  "account": "个人信息",
+  "signOut": "退出登录"
+}

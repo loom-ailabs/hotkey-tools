@@ -2,6 +2,8 @@
 @source "../../../../apps";
 @source "../../../../packages";
 
+@custom-variant dark (&:where(.dark, .dark *, .loom-dark, .loom-dark *));
+
 @theme inline {
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
@@ -25,10 +27,19 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-window: var(--window);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-control: var(--control);
+  --color-control-hover: var(--control-hover);
+  --color-link: var(--link);
+  --color-selection: var(--selection);
+  --color-selection-foreground: var(--selection-foreground);
+  --radius-sm: var(--corner-sm, calc(var(--radius) - 4px));
+  --radius-md: var(--corner-md, calc(var(--radius) - 2px));
+  --radius-lg: var(--corner-lg, var(--radius));
+  --radius-xl: var(--corner-xl, calc(var(--radius) + 4px));
 }
 :root {
   color-scheme: light;
@@ -52,6 +63,253 @@
   --border: oklch(0.9 0.012 250);
   --input: oklch(0.9 0.012 250);
   --ring: oklch(0.58 0.15 250);
+  --window: var(--muted);
+  --surface: var(--background);
+  --surface-raised: var(--card);
+  --surface-overlay: var(--card);
+  --control: var(--card);
+  --control-hover: var(--secondary);
+  --link: var(--primary);
+  --selection: var(--accent);
+  --selection-foreground: var(--accent-foreground);
+  --glass-solid: var(--surface-raised);
+  --glass-background: color-mix(in oklch, var(--surface-raised) 84%, transparent);
+  --glass-strong-background: color-mix(in oklch, var(--surface-raised) 94%, transparent);
+  --glass-nav-background: color-mix(in oklch, var(--surface-raised) 80%, transparent);
+  --glass-border: color-mix(in oklch, var(--foreground) 12%, transparent);
+  --glass-highlight: color-mix(in oklch, var(--card) 82%, transparent);
+  --glass-shadow-color: color-mix(in oklch, var(--foreground) 7%, transparent);
+  --glass-blur: 16px;
+  --glass-nav-blur: 24px;
+  --glass-saturation: 1.3;
+  --ambient-primary: color-mix(in oklch, var(--primary) 9%, transparent);
+  --ambient-secondary: color-mix(in oklch, var(--success) 6%, transparent);
+  --hero-canvas-primary: var(--primary);
+  --hero-canvas-secondary: color-mix(in oklch, var(--success) 65%, var(--primary));
+  --hero-canvas-highlight: var(--foreground);
+  --hero-canvas-muted: color-mix(in oklch, var(--foreground) 20%, transparent);
+  --hero-canvas-glow: color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+/* 来自 Loom Desktop 正式深色主题；交互蓝沿用其链接与焦点颜色。 */
+.dark,
+.loom-dark {
+  color-scheme: dark;
+  --background: #181818;
+  --foreground: #dfdfdf;
+  --card: #232323;
+  --card-foreground: #dfdfdf;
+  --primary: #8bbfff;
+  --primary-foreground: #181818;
+  --secondary: #2d2d2d;
+  --secondary-foreground: #dfdfdf;
+  --muted: #282828;
+  --muted-foreground: #b8b8b8;
+  --accent: #19354e;
+  --accent-foreground: #a2ceff;
+  --destructive: #ff8b84;
+  --success: #78d6a3;
+  --warning: #f3c46d;
+  --warning-foreground: #f3c46d;
+  --border: #353535;
+  --input: #353535;
+  --ring: #339cff;
+  --window: #25292c;
+  --surface: #181818;
+  --surface-raised: #232323;
+  --surface-overlay: #363636;
+  --control: #2d2d2d;
+  --control-hover: #343434;
+  --link: #8bbfff;
+  --selection: #19354e;
+  --selection-foreground: #a2ceff;
+  --corner-sm: 0.25rem;
+  --corner-md: 0.5rem;
+  --corner-lg: 0.625rem;
+  --corner-xl: 0.75rem;
+  --glass-background: color-mix(in oklch, var(--surface-raised) 82%, transparent);
+  --glass-strong-background: color-mix(in oklch, var(--surface-raised) 94%, transparent);
+  --glass-nav-background: color-mix(in oklch, var(--surface-raised) 76%, transparent);
+  --glass-border: color-mix(in oklch, var(--foreground) 13%, transparent);
+  --glass-highlight: color-mix(in oklch, var(--foreground) 9%, transparent);
+  --glass-shadow-color: color-mix(in oklch, var(--background) 55%, transparent);
+  --ambient-primary: color-mix(in oklch, var(--primary) 10%, transparent);
+  --ambient-secondary: color-mix(in oklch, var(--success) 7%, transparent);
+  --hero-canvas-muted: color-mix(in oklch, var(--foreground) 24%, transparent);
+  --hero-canvas-glow: color-mix(in oklch, var(--primary) 20%, transparent);
+}
+
+@layer components {
+  .loom-glass,
+  .loom-glass-strong,
+  .loom-glass-nav,
+  .loom-glass-control {
+    background: var(--glass-solid);
+    color: var(--foreground);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      0 16px 48px var(--glass-shadow-color),
+      inset 0 1px 0 var(--glass-highlight);
+  }
+  .loom-glass-control {
+    box-shadow: inset 0 1px 0 var(--glass-highlight);
+  }
+  .loom-atmosphere {
+    position: relative;
+    isolation: isolate;
+  }
+  .loom-atmosphere::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 10% 8%, var(--ambient-primary), transparent 56%),
+      radial-gradient(ellipse at 90% 60%, var(--ambient-secondary), transparent 54%);
+  }
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .loom-glass,
+    .loom-glass-strong,
+    .loom-glass-nav,
+    .loom-glass-control {
+      background: var(--glass-background);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    }
+    .loom-glass-strong {
+      background: var(--glass-strong-background);
+    }
+    .loom-glass-nav {
+      background: var(--glass-nav-background);
+      -webkit-backdrop-filter: blur(var(--glass-nav-blur)) saturate(var(--glass-saturation));
+      backdrop-filter: blur(var(--glass-nav-blur)) saturate(var(--glass-saturation));
+    }
+  }
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    .loom-glass,
+    .loom-glass-strong,
+    .loom-glass-nav,
+    .loom-glass-control {
+      background: var(--glass-solid);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      box-shadow: none;
+    }
+    .loom-atmosphere::before {
+      display: none;
+    }
+  }
+  @media (forced-colors: active) {
+    .loom-glass,
+    .loom-glass-strong,
+    .loom-glass-nav,
+    .loom-glass-control {
+      background: Canvas;
+      color: CanvasText;
+      border-color: CanvasText;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      box-shadow: none;
+    }
+    .loom-atmosphere::before {
+      display: none;
+    }
+  }
+}
+
+/* The hero keeps its readable center while the digital threads occupy the edges. */
+.loom-hero {
+  background: radial-gradient(ellipse at 50% 80%, var(--ambient-primary), transparent 64%);
+}
+.loom-weave-canvas,
+.loom-weave-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse at 50% 36%, transparent 12%, black 70%);
+}
+.loom-weave-fallback {
+  color: var(--hero-canvas-primary);
+  opacity: 0.3;
+}
+[data-weave-drawn="true"] .loom-weave-fallback {
+  display: none;
+}
+.loom-hero-accent {
+  color: var(--link);
+  background: linear-gradient(100deg, var(--primary), var(--hero-canvas-secondary));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .loom-hero {
+    background: none;
+  }
+  .loom-weave-canvas,
+  .loom-weave-fallback {
+    opacity: 0.18;
+  }
+}
+@media (forced-colors: active) {
+  .loom-weave-canvas,
+  .loom-weave-fallback {
+    display: none;
+  }
+  .loom-hero-accent {
+    color: CanvasText;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+@keyframes loom-login-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes loom-login-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.03);
+  }
+}
+@keyframes loom-login-trace {
+  to {
+    stroke-dashoffset: -104;
+  }
+}
+.loom-login-orbit {
+  transform-origin: center;
+  animation: loom-login-orbit 28s linear infinite;
+}
+.loom-login-orbit-reverse {
+  animation-direction: reverse;
+  animation-duration: 36s;
+}
+.loom-login-pulse {
+  transform-origin: center;
+  animation: loom-login-pulse 4s ease-in-out infinite;
+}
+.loom-login-trace {
+  stroke-dasharray: 8 18;
+  animation: loom-login-trace 6s linear infinite;
+}
+.loom-login-paused :is(.loom-login-orbit, .loom-login-pulse, .loom-login-trace) {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.loom-login-orbit, .loom-login-pulse, .loom-login-trace) {
+    animation: none;
+  }
 }
 @layer base {
   * {

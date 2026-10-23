@@ -1,66 +1,122 @@
-import { Button, Card, CardContent, CardDescription, CardHeader } from "@hotkey-tools/ui";
-import { ArrowRight, Command, ShieldCheck } from "lucide-react";
+"use client";
+
+import Image from "next/image";
+import { localizeUrl, useTranslations } from "@hotkey-tools/i18n";
+import { useLocaleSwitcher } from "@hotkey-tools/i18n/navigation";
+import { Alert, AlertDescription, AlertTitle, Button, PreferencesMenu } from "@hotkey-tools/ui";
+import { ArrowLeft, CircleAlert, ShieldCheck } from "lucide-react";
+import { LoginShowcase } from "./login-showcase";
+import { GithubMark, GoogleMark } from "./social-icons";
 
 export type SignInPageProps = {
   googleSignInUrl: string;
   githubSignInUrl: string;
+  notice?: { title: string; message: string };
 };
 
-export function SignInPage({ googleSignInUrl, githubSignInUrl }: SignInPageProps) {
+export function SignInPage({ googleSignInUrl, githubSignInUrl, notice }: SignInPageProps) {
+  const t = useTranslations("SignIn.login");
+  const { locale, switchLocale } = useLocaleSwitcher();
+  const homeUrl = localizeUrl("https://www.loom-labs.ai/", locale);
   return (
-    <div className="flex min-h-screen flex-col bg-muted/30 px-5 sm:px-8">
-      <header className="mx-auto flex w-full max-w-5xl items-center py-7">
-        <a
-          href="/"
-          className="flex items-center gap-2.5 rounded-md text-base font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="Hotkey Tools 登录首页"
-        >
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Command className="size-5" aria-hidden="true" />
-          </span>
-          Hotkey Tools
-        </a>
-      </header>
-      <main className="flex flex-1 items-center justify-center py-10 sm:py-16">
-        <div className="w-full max-w-sm space-y-8">
-          <div className="space-y-3 text-center">
-            <p className="text-sm font-medium text-primary">欢迎回来</p>
-            <h1 className="text-3xl leading-tight font-semibold tracking-tight">
-              登录，继续你的工作。
-            </h1>
-            <p className="text-sm leading-7 text-muted-foreground">
-              使用已有账号安全登录，无需另设密码。
+    <div className="loom-atmosphere grid min-h-svh bg-background lg:grid-cols-2">
+      <div className="flex min-h-svh flex-col px-6 pb-6 pt-5 sm:px-10 lg:px-12">
+        <header className="flex items-center justify-between gap-5">
+          <a
+            href={homeUrl}
+            aria-label={t("homeLabel")}
+            className="flex items-center gap-2.5 rounded-md text-lg font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Image
+              src="/loom-mark.svg"
+              alt=""
+              width={36}
+              height={36}
+              className="size-9 opacity-85 dark:invert"
+              unoptimized
+              priority
+            />
+            Loom AI
+          </a>
+          <PreferencesMenu
+            locale={locale}
+            onLocaleChange={switchLocale}
+            labels={{
+              settings: t("settings"),
+              theme: t("theme"),
+              light: t("light"),
+              dark: t("dark"),
+              system: t("system"),
+              language: t("language"),
+            }}
+          />
+        </header>
+        <main className="flex flex-1 items-center justify-center py-16">
+          <section aria-labelledby="sign-in-title" className="w-full max-w-sm text-center">
+            <p className="mb-4 text-xs font-medium tracking-widest text-muted-foreground">
+              {t("eyebrow")}
             </p>
-          </div>
-          <Card>
-            <CardHeader className="pb-5 text-center">
-              <h2 className="text-base font-semibold">选择登录方式</h2>
-              <CardDescription>首次使用将自动创建 Hotkey Tools 账号。</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button asChild variant="outline" size="lg" className="w-full justify-between">
+            <h1
+              id="sign-in-title"
+              className="text-3xl font-medium leading-tight tracking-tight sm:text-4xl"
+            >
+              {t("title")}
+            </h1>
+            <p className="mt-4 text-sm leading-7 text-muted-foreground">{t("description")}</p>
+            {notice ? (
+              <Alert variant="warning" className="mt-6">
+                <CircleAlert aria-hidden="true" />
+                <div>
+                  <AlertTitle>{notice.title}</AlertTitle>
+                  <AlertDescription>{notice.message}</AlertDescription>
+                </div>
+              </Alert>
+            ) : null}
+            <div className="mt-8 space-y-3">
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 w-full rounded-full bg-control/50 text-foreground hover:bg-control-hover"
+              >
                 <a href={googleSignInUrl}>
-                  使用 Google 继续
-                  <ArrowRight aria-hidden="true" />
+                  <GoogleMark />
+                  {t("google")}
                 </a>
               </Button>
-              <Button asChild variant="outline" size="lg" className="w-full justify-between">
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 w-full rounded-full bg-control/50 text-foreground hover:bg-control-hover"
+              >
                 <a href={githubSignInUrl}>
-                  使用 GitHub 继续
-                  <ArrowRight aria-hidden="true" />
+                  <GithubMark />
+                  {t("github")}
                 </a>
               </Button>
-            </CardContent>
-          </Card>
-          <p className="flex items-center justify-center gap-2 text-center text-xs leading-relaxed text-muted-foreground">
-            <ShieldCheck className="size-4 shrink-0" aria-hidden="true" />
-            通过官方授权页面登录，密码不会交给 Hotkey Tools。
-          </p>
-        </div>
-      </main>
-      <footer className="py-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Hotkey Tools
-      </footer>
+            </div>
+            <p className="mt-6 text-center text-xs leading-6 text-muted-foreground">
+              {t("firstTime")}
+            </p>
+            <div className="mt-7 border-t pt-6">
+              <p className="flex items-start justify-center gap-2 text-xs leading-6 text-muted-foreground">
+                <ShieldCheck className="mt-1 size-3.5 shrink-0" aria-hidden="true" />
+                {t("security")}
+              </p>
+            </div>
+          </section>
+        </main>
+        <footer className="flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} Loom AI</span>
+          <a
+            href={homeUrl}
+            className="inline-flex items-center gap-1.5 rounded-md outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowLeft className="size-3.5" aria-hidden="true" />
+            {t("back")}
+          </a>
+        </footer>
+      </div>
+      <LoginShowcase />
     </div>
   );
 }

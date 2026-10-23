@@ -1,0 +1,65 @@
+/* Logto Cloud Free: developer tenant kpy72v, Sign-in & account > Branding.
+ * External hosted UI export. Dark values mirror packages/ui globals.css.
+ * Keep provider icons, errors, account linking and Powered by Logto visible.
+ */
+html[data-theme="light"] {
+  color-scheme: light;
+  background: oklch(0.99 0.004 250);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  background: #181818;
+}
+html[data-theme="light"] body {
+  --color-bg-body: oklch(0.99 0.004 250);
+  --color-bg-body-base: oklch(0.99 0.004 250);
+  --color-bg-float: #fff;
+  --color-type-primary: oklch(0.18 0.02 250);
+  --color-type-secondary: oklch(0.48 0.03 250);
+}
+html[data-theme="dark"] body {
+  --color-bg-body: #181818;
+  --color-bg-body-base: #181818;
+  --color-bg-float: #232323;
+  --color-type-primary: #dfdfdf;
+  --color-type-secondary: #b8b8b8;
+  --color-line-border: #353535;
+}
+html[data-theme] body {
+  background: var(--color-bg-body);
+  color: var(--color-type-primary);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+/* Decorates only loading views; no overlays or changes to authentication controls. */
+#app:has(svg[class$="_loadingIcon"])::before {
+  content: "";
+  position: fixed;
+  top: 3rem;
+  left: 1.5rem;
+  width: 2rem;
+  height: 2rem;
+  background: url("https://login.loom-labs.ai/loom-mark.svg") center / contain no-repeat;
+  pointer-events: none;
+}
+html[data-theme="dark"] #app:has(svg[class$="_loadingIcon"])::before {
+  filter: invert(1);
+  opacity: 0.88;
+}
+#app svg[class$="_loadingIcon"] {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+#app div[class*="_connectorContainer"] {
+  gap: 1.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  #app svg[class$="_loadingIcon"] {
+    animation: none;
+  }
+}

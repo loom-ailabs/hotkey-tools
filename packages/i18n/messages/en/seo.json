@@ -1,0 +1,38 @@
+{
+  "description": "Connecting intelligence. Crafting tomorrow. Discover the Loom AI vision and explore creative-tool product planning in your workspace.",
+  "brandImageAlt": "Loom AI brand mark",
+  "pages": {
+    "home": {
+      "title": "Loom AI · Connecting Intelligence. Crafting Tomorrow.",
+      "label": "Home",
+      "description": "Connecting intelligence. Crafting tomorrow. Discover the Loom AI vision and explore creative-tool product planning in your workspace.",
+      "content": "Loom AI aims to connect context across desktop, browser, and editor tools so people and intelligence can collaborate. Discover the vision, explore the workspace, and unlock a creative-tool work plan with Loom Pro."
+    },
+    "vision": {
+      "title": "Our Vision · Loom AI",
+      "label": "Our vision",
+      "description": "Discover how Loom AI aims to connect tools and context, turning scattered discoveries into clear next steps.",
+      "content": "Our vision is to carry ideas beyond a single window, let context flow across familiar tools, and help people turn thoughts into action together with intelligence. Desktop, browser, and editor experiences are the connections Loom AI is exploring."
+    },
+    "workspace": {
+      "title": "Loom Workspace · From Idea to Action",
+      "label": "Loom workspace",
+      "description": "Explore a creative-tool work plan and find your next step around the goal, the context, and a first release.",
+      "content": "Loom Workspace provides a creative-tool work plan curated by Loom. Sign in and unlock Loom Pro to view steps for defining the product goal, organizing context, and delivering a first release. The plan is for reading and planning; it does not call models, create files, or perform external actions."
+    },
+    "pricing": {
+      "title": "Plans & Pricing · Loom Explore and Loom Pro",
+      "label": "Plans & pricing",
+      "description": "Explore Loom AI for free or unlock the Loom Pro work plan with a one-time purchase. The current USD 1.00 payment is a test and makes no real charge.",
+      "content": "Loom Explore offers free access to the vision and workspace introduction. Loom Pro unlocks the creative-tool work plan with a one-time purchase and saves access to your account, with no subscription or automatic renewal. The current USD 1.00 payment uses Stripe Sandbox and makes no real charge; it is not a commercial price."
+    }
+  },
+  "boundary": "Work plans are curated by Loom for reading and planning, without automated execution. Payments are currently in test mode and make no real charge.",
+  "publicPages": "Public pages",
+  "publicText": "Public text",
+  "textLink": "Plain-text overview",
+  "textDescription": "Public information about the vision, workspace, and plans, without account, order, or authentication data.",
+  "publicTitle": "Public content overview",
+  "privateBoundary": "This document describes public product information only. It provides no personal data, authentication credentials or paid content.",
+  "pageLabel": "Page"
+}

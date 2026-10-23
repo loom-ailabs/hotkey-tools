@@ -7,6 +7,8 @@ autoInstallPeers: false
 strictPeerDependencies: false
 
 allowBuilds:
+  "@parcel/watcher": true
+  "@swc/core": true
   esbuild: true
   sharp: true
   workerd: true

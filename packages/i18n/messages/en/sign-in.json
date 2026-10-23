@@ -1,0 +1,46 @@
+{
+  "login": {
+    "homeLabel": "Loom AI home",
+    "eyebrow": "YOUR NEXT CHAPTER",
+    "title": "Welcome to Loom",
+    "description": "A place for your ideas and tools to meet. Sign in and continue your next creation.",
+    "google": "Continue with Google",
+    "github": "Continue with GitHub",
+    "firstTime": "New here? Signing in will create your Loom account.",
+    "security": "Authorize on the official provider page. Your password stays with you.",
+    "back": "Back to home",
+    "settings": "Preferences",
+    "theme": "Appearance",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "language": "Language"
+  },
+  "carousel": {
+    "label": "Explore Loom",
+    "role": "carousel",
+    "slideRole": "slide",
+    "position": "{index} of {total}",
+    "pause": "Stop automatic rotation",
+    "play": "Start automatic rotation",
+    "choose": "Choose content to explore",
+    "benefitAccount": "One account",
+    "benefitSecurity": "Secure sign-in",
+    "benefitControl": "You're in control",
+    "connect": {
+      "eyebrow": "Connecting Intelligence",
+      "title": "Intelligence, connected.",
+      "description": "Our vision is to connect ideas, tools, and ways of working, giving every creation a more natural starting point."
+    },
+    "continuity": {
+      "eyebrow": "Crafting Tomorrow",
+      "title": "Keep your work in flow.",
+      "description": "From desktop to browser to editor. Different entry points, connected by the same creative journey."
+    },
+    "access": {
+      "eyebrow": "One Loom Account",
+      "title": "Every step, in your hands.",
+      "description": "One account connects your Loom products. Sign in securely and manage your access with clarity."
+    }
+  }
+}

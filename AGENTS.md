@@ -10,7 +10,8 @@
 - 所有新增 Web 应用统一使用 **Next.js 全栈应用**：页面与业务 API 位于同一应用、同一服务和同一域名。每个产品在 `apps/<产品名>` 下拥有独立应用与 package。
 - 使用 App Router 承载页面，使用 `src/app/api/**/route.ts` 承载 HTTP API；应用业务逻辑放在本应用的 `src/server`。不要为同一个 Web 产品再新增独立 Hono、Express 网关或另一套 BFF。
 - Cloudflare 通过 OpenNext 将该 Next.js 应用部署为一个 Worker，同时提供页面、静态资源和 API。需要登录或动态 API 的应用不得设置 `output: "export"`。
-- `apps/web` 与 `apps/worker` 保留为既有静态 Web/网关示例；它们不作为新认证、支付和产品 API 的落点。默认产品开发入口使用 `apps/identity`。
+- `apps/web` 是 `www.loom-labs.ai` 的 Loom AI 产品首页与工作区，使用 Next.js/OpenNext 提供页面与受保护 API。`apps/identity` 提供统一登录入口与购买页；子域通过 `.loom-labs.ai` 的随机会话标识 Cookie 访问同一份 D1 会话与权益，使用相同的会话加密密钥和 Logto 应用。共享服务端实现提取到 package，禁止应用互相导入。
+- `apps/worker` 保留为旧网关示例，不承载正式首页或新的认证、支付逻辑。站点以实际交付能力使用正式产品文案，不在界面放置 Demo、示例或演示标签；当前工作计划按整理好的阅读与规划内容呈现，不宣称调用真实模型或代为执行任务。付款仍处于测试模式，购买位置必须清楚说明不会真实扣款。
 - `apps/python` 与 `packages/python/*` 保持既有 uv workspace 边界。只有明确需要 Python 的能力才由独立 Python Worker 提供；用户身份、订单和权益判断仍由 Next.js 服务负责。
 - 应用不能导入另一应用的实现。业务类型与接口定义先留在实际所有者中，多个活跃消费者确实需要共享时，再提取职责明确的 package。
 - 仓库根目录只管理 workspace、工具链与任务，不承载应用代码，不声明根 Python package。
@@ -19,7 +20,7 @@
 
 - Web：Next.js 16、React 19、TypeScript strict、Tailwind CSS 4。
 - UI：本仓库 `packages/ui` 中的 shadcn/ui 风格基础组件、统一主题变量和 `cn()`；图标使用 `lucide-react`。
-- 持久化：Cloudflare D1；认证使用已发布的 Logto 官方 Next.js SDK；支付使用 Stripe 官方 SDK 与托管 Checkout。
+- 持久化：Cloudflare D1；认证协议与短期令牌刷新使用已发布的 Logto 官方 SDK，Next.js 只读写父域随机会话标识，SDK 状态加密保存在 D1；支付使用 Stripe 官方 SDK 与托管 Checkout。
 - 测试：Vitest；React 交互测试按需使用 Testing Library 与 happy-dom；数据库状态和事务测试使用实际 SQL 执行环境。
 - 格式与静态检查使用 **Oxlint、Oxfmt**。不要添加 ESLint 或 Prettier 配置与依赖。
 - mise 管理项目固定的 Node.js、pnpm、Python、uv 和 Wrangler CLI 版本。Identity 使用 `mise identity <命令>`（对应 `mise run identity:<命令>`）作为统一入口，临时命令使用 `mise exec -- ...`，不修改全局工具版本。
@@ -47,6 +48,7 @@ apps/identity/src/
 - 前端依赖方向为 `App → Pages → Widgets → Features → Entities → Shared`。下层不得依赖上层，同层不同 slice 不直接导入内部实现。
 - `src/app` 是 Next.js 适配层，不是 FSD App 层。为避免框架保留目录冲突，FSD Pages 使用 `_pages`，FSD App 使用 `_app`。
 - 保留标准的 `page.tsx`、`layout.tsx`、`route.ts` 命名；确需请求拦截时使用 Next.js 16 的 `src/proxy.ts`。不得通过修改 `pageExtensions` 绕开架构边界。
+- 页面导航使用 Next.js 路径路由，不使用 Hash 路由或 `#workspace` 等片段地址作为页面入口。登录与支付返回地址同样使用真实路径；新增页面必须能够直接访问和刷新。
 - 页面只负责组合。支付流程、轮询、请求重试及其他业务状态放在相应 feature 的 model/hooks/API 中。
 - slice 对外通过 `index.ts` 暴露公共接口；其他 slice 不越过公共入口访问内部文件。
 - `shared` 只包含不带产品业务规则的通用能力。订单定价、身份归属、权益规则不能藏在通用 `utils`、`helpers` 或 `manager` 中。
@@ -62,7 +64,14 @@ apps/identity/src/
 - 使用 Tailwind utilities 与 `cn()` 组合样式。不要新增 CSS Modules、styled-components、Emotion、组件局部样式或内联 style 对象。
 - 点击控件使用语义化 `button`、`a[href]` 等，非禁用状态显示 pointer；同时提供键盘焦点、禁用、加载、空态和错误反馈。
 - 页面需要适配移动端与桌面端。保留可读的排版层级、合理对比度、表单标签与必要的 `aria` 属性。
-- 用户界面使用自然中文，SDK、协议、代码标识符和必要产品名保持原文。工程配置和实现细节放在开发文档，不挤入普通产品流程。
+- 平台首期提供简体中文与英文，统一使用 `packages/i18n` 的 next-intl App Router 接线和消息文件；默认英文沿用根路径，中文使用 `/zh` 路径，旧 `/en` 页面地址保留查询并跳转至对应英文根路径。禁止以 Hash 或仅客户端替换实现多语言。API、认证回调和 Webhook 保持 `/api` 原路径；`Link`、语言切换和外部产品链接应保留用户选择的语言与合法返回地址。新增用户可见文案同时补齐两种语言，不以翻译后的文案决定业务分支。
+- 中文界面使用自然中文，英文界面使用自然英文；SDK、协议、代码标识符和必要产品名保持原文。工程配置和实现细节放在开发文档，不挤入普通产品流程。
+- 外观使用共享 `AppearanceProvider`，支持浅色、深色与跟随系统；主题与语言偏好只写入经过枚举校验的 `LOOM_THEME`、`LOOM_LOCALE` 父域 Cookie，不承载身份或权益。主题、语言切换不得改变认证 Cookie 或放宽退出的来源校验。
+- 账户菜单使用可访问的 Avatar/Dropdown Menu，头像缺失或失败时提供文字回退；个人资料只来自当前受校验身份，不根据 URL 参数或邮箱推断用户。轮播与动画必须可手动控制，并遵循减少动态效果设置。
+- 首页账号状态在每次完整页面加载时读取一次，由共享客户端 Provider 在页面路由间保留；不因窗口聚焦、可见性变化、定时器或路由切换自动同步。用户刷新页面或点击刷新操作时才更新账号显示；初始读取不在导航显示同步文案，账号入口保留稳定空间。该显示状态不能用于服务端鉴权，受保护请求仍须验证当前会话和权益。
+- 公开页面同时面向用户、搜索引擎和 AI 检索：正文由服务端输出，提供准确的标题、描述、规范网址、分享元数据、站点地图和可抓取的内部链接。结构化数据必须与可见内容一致，不虚构评价、客户、真实模型能力或将 Sandbox 价格当作正式报价。
+- 公开产品说明可提供 `llms.txt` 等便于 AI 读取的文本入口，并与页面内容同步；不承诺这些文件能提高搜索排名。登录、支付、私人接口和用户数据禁止索引，实际访问控制始终由服务端认证与鉴权负责，不能由 robots.txt 代替。
+- 各语言公开页输出对应语言的 HTML、标题、描述、canonical 与 hreflang；站点地图包含两种语言的公开页面，个人信息等私有页面禁止索引且不进入站点地图。无语言偏好时默认英文，不依赖浏览器 Accept-Language 为搜索引擎生成不稳定内容；用户已经保存的中文偏好继续有效。
 
 ## Next.js 服务端与 HTTP API
 
@@ -95,8 +104,12 @@ apps/identity/src/
 ## 登录、支付与鉴权规则
 
 - 首版：Logto Cloud Free + Google/GitHub 登录，Stripe Sandbox 单次购买，D1 管理产品权益。
-- 使用已发布的官方 Next.js SDK，回调验证 state、PKCE、issuer、audience 和签名；不能把 JWT decode 当作认证校验。
-- 后续请求必须验证会话在服务端的有效期，不能只依赖浏览器 Cookie 的 `Max-Age`。过期会话要求重新登录，除非已明确实现并验证安全续期。
+- 使用已发布的 Logto 官方 SDK，回调验证 state、PKCE、issuer、audience 和签名；不能把 JWT decode 当作认证校验，不修改 SDK 源码以实现 Cookie 设置。
+- `login.loom-labs.ai` 统一发起登录并处理回调。有效会话直接返回原产品地址；会话绝对到期、已撤销或无法安全刷新时重新登录。返回地址必须校验 HTTPS、精确域名后缀、端口与用户信息，保留合法路径与查询；拒绝外域、含片段的地址及会引发登录循环的目标。
+- 正式会话 Cookie 为 `__Secure-loom_sid_<appId>`，登录流程 Cookie 为 `__Secure-loom_flow_<appId>`；两者仅保存随机标识，使用 `Domain=.loom-labs.ai; Path=/; Secure; HttpOnly; SameSite=Lax`，写入与删除必须匹配 Domain/Path。父域下的所有子域均属于会话信任范围；新增产品不得托管不受信任的子域内容或采用另一套会话密钥。本地不设置正式父域，且 Cookie 名不带 `__Secure-` 前缀。
+- `auth_sessions` 是会话有效性与撤销的权威存储：只保存标识的 SHA-256 哈希以及经 HKDF 派生密钥、AES-GCM 加密的 SDK 状态，不把令牌写入浏览器 Cookie。应用会话从成功回调起固定 14 天，流程状态固定 10 分钟；刷新不得延长绝对截止时间，不能只依赖浏览器 `Max-Age`。
+- 身份令牌或 access token 剩余有效期不超过 60 秒，或 access token 缓存缺失、异常时，使用官方 SDK 公开方法刷新并重新读取、校验身份；RSC 读取只需 Cookie，不依赖重新写入 Cookie。跨 Worker 刷新通过 D1 `first-primary`、版本比较更新及 30 秒租约串行化；请求与协议总耗时有界，锁过期不接管旧 refresh token，结果不确定时撤销会话，禁止重试可能已轮换的旧状态。
+- 统一退出先在 D1 撤销当前共享会话及关联登录流程，再由 SDK 尽力撤销上游 refresh token；适配层在 finally 中清除 Cookie，最终响应以 303 执行 Logto 登出。并发刷新或已知关联流程的迟到回调不能恢复已撤销会话。该范围是当前 Cookie 标识的共享会话与流程，不等于退出用户的所有设备或撤销无关联的独立新授权；清除 Cookie、主动退出、上游失效或安全异常都可能要求在 14 天前重新登录。
 - 用户归属来自受校验会话中的稳定身份。保留 `(issuer, subject)` 映射，不以邮箱匹配订单或自动合并账号。
 - 不把 ID Token 当作通用业务 API access token；不依赖 Logto 付费 RBAC/API resources 才能实现首版付费鉴权。
 - 浏览器写操作检查配置的准确 Origin；Stripe Webhook 按原文与签名认证，不能要求用户登录或套用浏览器 Origin 校验。
@@ -106,7 +119,7 @@ apps/identity/src/
 - Webhook 必须原文验签、事件去重、容忍重复及乱序；事件处理标记、订单更新与权益变更原子提交。处理失败必须可重试。
 - 权益按来源订单独立管理。确认成功全额退款后撤回对应订单权益，迟到成功事件不能恢复；其他有效订单仍可支撑使用权限。
 - 每次受保护操作检查当前权益。只隐藏按钮、长期缓存 `isPaid` 或把付费状态写入长期 Cookie/JWT，均不能代替服务端鉴权。
-- D1 是订单与权益的权威存储，KV 只承载可容忍传播延迟的缓存或配置。
+- D1 是会话、订单与权益的权威存储，KV 只承载可容忍传播延迟的缓存或配置。
 - 测试与生产密钥、Webhook 密钥、回调域名和数据库分开配置；密钥不进入 `NEXT_PUBLIC_*`、源码、生成页面或提交记录。
 
 ## 代码质量与验证
@@ -117,7 +130,7 @@ apps/identity/src/
 - 数据库变更新增 migration，不修改已经应用的迁移；迁移、回滚和恢复路径必须可说明。
 - 测试覆盖可观察行为、边界条件、状态转换和故障恢复，不写只重复实现的镜像测试。
 - 认证、支付、权益及 HTTP 边界的适用测试必须覆盖正常与拒绝路径；核心业务覆盖率目标为 statements、branches、functions、lines 均至少 90%。不通过排除未测业务模块或忽略失败分支达标。
-- 必测行为包括会话过期、未登录/未购买、跨用户订单访问、来源检查、伪造回调、重复及乱序事件、事务失败重试、全额退款和多订单权益隔离。
+- 必测行为包括会话 14 天绝对边界、短期令牌自动刷新、并发刷新与退出竞争、失效或超时刷新后拒绝访问、迟到回调、已撤销 SID 重放，以及未登录/未购买、跨用户订单访问、来源检查、伪造回调、重复及乱序事件、事务失败重试、全额退款和多订单权益隔离。
 - HTTP、SQL 和 UI 交互采用适合该边界的单元/集成测试；样式与静态配置不需要为覆盖率编造无效测试。
 - 先运行受影响 package 的类型、lint、测试与构建，再根据共享模块和任务入口的变化扩展验证。
 - 较大变更交付前运行 `mise run verify`；新应用还需要实际 HTTP smoke 与 OpenNext/Workers 本地预览验证。
@@ -134,6 +147,7 @@ mise identity build
 mise identity preview
 mise identity test
 mise identity coverage
+mise identity check-session
 mise identity verify
 mise identity deploy-dry-run
 mise identity db-create

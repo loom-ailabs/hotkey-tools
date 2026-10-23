@@ -4,27 +4,46 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 3000",
-    "build": "next build",
+    "dev": "pnpm db:migrate:local && next dev --webpack --port 3000",
+    "build": "next build --webpack",
     "check-types": "next typegen && tsc --noEmit",
-    "lint": "oxlint .",
-    "test": "vitest run"
+    "lint": "oxlint src",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "cf:build": "node ../../scripts/check-worker-env.mjs && opennextjs-cloudflare build",
+    "preview": "pnpm db:migrate:preview && pnpm cf:build && opennextjs-cloudflare preview --env preview --local --port 3000 --inspector-port 9300 --var APP_URL:http://localhost:3000 --var AUTH_SUCCESS_URL:http://localhost:3000/",
+    "deploy": "pnpm cf:build && opennextjs-cloudflare deploy",
+    "deploy:dry-run": "pnpm cf:build && wrangler deploy --dry-run --outdir dist",
+    "db:migrate:local": "wrangler d1 migrations apply hotkey-tools-identity --local",
+    "db:migrate:preview": "wrangler d1 migrations apply hotkey-tools-identity --local --env preview"
   },
   "dependencies": {
-    "next": "16.2.10",
+    "@hotkey-tools/i18n": "workspace:*",
+    "@hotkey-tools/identity-core": "workspace:*",
+    "@hotkey-tools/ui": "workspace:*",
+    "@opennextjs/cloudflare": "1.20.13",
+    "jose": "5.10.0",
+    "lucide-react": "^1.61.0",
+    "next": "16.4.2",
+    "next-intl": "4.14.9",
     "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "react-dom": "19.2.7",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.2",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/react": "^16.3.2",
+    "@cloudflare/workers-types": "^5.20261019.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "happy-dom": "^20.11.1",
-    "tailwindcss": "^4.3.2",
+    "@vitest/coverage-v8": "^4.1.9",
+    "happy-dom": "^21.0.4",
+    "oxlint": "^1.72.0",
+    "postcss": "^8.5.31",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "wrangler": "4.151.2"
   }
 }

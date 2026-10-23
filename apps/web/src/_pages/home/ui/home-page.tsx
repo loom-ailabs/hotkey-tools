@@ -1,61 +1,268 @@
-const examples = [
-  { combo: "Ctrl + K", label: "打开命令面板" },
-  { combo: "Ctrl + Shift + P", label: "快速搜索" },
-  { combo: "Alt + ↑", label: "切换到上一个工作区" },
-];
+"use client";
 
-export function HomePage() {
+import { localizeUrl } from "@hotkey-tools/i18n/routing";
+
+import Image from "next/image";
+import { Button, GlassSurface } from "@hotkey-tools/ui";
+import { useLocale, useTranslations } from "@hotkey-tools/i18n";
+import { Link } from "@hotkey-tools/i18n/navigation";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Box,
+  Check,
+  Command,
+  Layers3,
+  Monitor,
+  Sparkles,
+} from "lucide-react";
+import { HeroBanner } from "./hero-banner";
+import { AccountMenu, AccountProfile } from "./profile-menu";
+import { ProductWorkspace, useProductAccess } from "@/features/product-workspace";
+
+function Brand({ compact = false }: { compact?: boolean }) {
+  const t = useTranslations("Web");
   return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-16 px-6 py-16 lg:px-10">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-600">
-            Hotkey Tools
-          </p>
-          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
-            把快捷键整理成自己的工作流
-          </h1>
-        </div>
-        <span className="rounded-full bg-white px-4 py-2 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-          初始化版本
+    <Link
+      href="/"
+      className="inline-flex items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label={t("brandHome")}
+    >
+      <Image
+        src="/loom-mark.svg"
+        alt=""
+        width={36}
+        height={36}
+        className="size-9 opacity-85 dark:invert"
+        unoptimized
+      />
+      <span className="text-lg font-semibold tracking-tight">
+        Loom<span className="ml-1 font-normal text-muted-foreground">AI</span>
+      </span>
+      {!compact && (
+        <span className="ml-1 hidden rounded border px-1.5 py-0.5 font-mono text-xs text-muted-foreground sm:inline">
+          LABS
         </span>
+      )}
+    </Link>
+  );
+}
+
+type ProductView = "home" | "vision" | "workspace" | "pricing" | "account";
+export function HomePage({ view = "home" }: { view?: ProductView }) {
+  const t = useTranslations("Web");
+  const locale = useLocale();
+  const access = useProductAccess();
+  const premium = access.profile?.entitlements.premium ?? false;
+  const checkoutUrl = localizeUrl("https://checkout.loom-labs.ai/", locale);
+  const capabilities = [
+    {
+      number: "01",
+      icon: Monitor,
+      title: t("capability1Title"),
+      body: t("capability1Body"),
+      label: "ACROSS YOUR TOOLS",
+    },
+    {
+      number: "02",
+      icon: Layers3,
+      title: t("capability2Title"),
+      body: t("capability2Body"),
+      label: "CONTEXT THAT CONNECTS",
+    },
+    {
+      number: "03",
+      icon: Sparkles,
+      title: t("capability3Title"),
+      body: t("capability3Body"),
+      label: "FROM THOUGHT TO ACTION",
+    },
+  ];
+  return (
+    <div className="loom-atmosphere flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
+      <header className="loom-glass-nav sticky top-0 z-30 border-x-0 border-t-0">
+        <nav
+          className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-3 px-5 sm:px-6 lg:px-10"
+          aria-label={t("navLabel")}
+        >
+          <Brand />
+          <div className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
+            <Link className="transition-colors hover:text-foreground" href="/vision">
+              {t("vision")}
+            </Link>
+            <Link className="transition-colors hover:text-foreground" href="/workspace">
+              {t("workspace")}
+            </Link>
+            <Link className="transition-colors hover:text-foreground" href="/pricing">
+              {t("pricing")}
+            </Link>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex w-32 shrink-0 items-center justify-end gap-2">
+              <AccountMenu access={access} />
+            </div>
+            <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
+              <Link href="/workspace">
+                {t("enterWorkspace")}
+                <ArrowUpRight />
+              </Link>
+            </Button>
+          </div>
+        </nav>
+        <nav
+          aria-label={t("navLabel")}
+          className="flex items-center justify-center gap-8 border-t px-5 py-3 text-xs text-muted-foreground md:hidden"
+        >
+          <Link href="/vision">{t("vision")}</Link>
+          <Link href="/workspace">{t("workspace")}</Link>
+          <Link href="/pricing">{t("pricing")}</Link>
+        </nav>
       </header>
-
-      <section className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-        <div className="rounded-3xl bg-slate-950 p-8 text-white shadow-xl shadow-slate-900/10">
-          <p className="text-sm text-indigo-300">快捷键库</p>
-          <h2 className="mt-4 max-w-xl text-3xl font-semibold leading-tight">
-            记录、搜索并复用你最常用的快捷键。
-          </h2>
-          <p className="mt-5 max-w-xl text-base leading-7 text-slate-300">
-            Web 使用 Next.js 静态导出，数据接口由同一个 Cloudflare Worker 提供，结构化数据存储在
-            D1。
-          </p>
-          <a
-            className="mt-8 inline-flex rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-400"
-            href="#examples"
-          >
-            查看示例
-          </a>
-        </div>
-
-        <div id="examples" className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-lg font-semibold text-slate-950">示例快捷键</h2>
-          <ul className="mt-5 space-y-3">
-            {examples.map((example) => (
-              <li
-                className="flex items-center justify-between gap-4 rounded-2xl bg-slate-50 px-4 py-3"
-                key={example.combo}
+      <main className="mx-auto w-full max-w-7xl flex-1 px-6 lg:px-10">
+        {view !== "home" && (
+          <h1 className="sr-only">
+            {view === "workspace"
+              ? t("workName")
+              : view === "vision"
+                ? t("vision")
+                : view === "account"
+                  ? t("accountTitle")
+                  : t("pricing")}
+          </h1>
+        )}
+        {view === "account" && <AccountProfile access={access} />}
+        {view === "home" && <HeroBanner />}
+        {(view === "home" || view === "vision") && (
+          <section className="pt-20 sm:pt-28">
+            <p className="mb-4 font-mono text-xs tracking-widest text-link">
+              BUILT AROUND YOUR FLOW
+            </p>
+            <h2 className="max-w-3xl text-3xl leading-snug font-medium tracking-tight sm:text-4xl">
+              {t("visionTitle")}
+              <br />
+              <span className="text-muted-foreground">{t("visionAccent")}</span>
+            </h2>
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              {capabilities.map(({ number, icon: Icon, title, body, label }) => (
+                <article key={number} className="loom-glass rounded-xl p-6 lg:p-7">
+                  <div className="mb-6 flex items-center justify-between">
+                    <Icon className="size-6 text-link" />
+                    <span className="font-mono text-xs text-muted-foreground">{number}</span>
+                  </div>
+                  <h3 className="text-lg font-medium tracking-tight">{title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-muted-foreground">{body}</p>
+                  <p className="mt-6 font-mono text-xs tracking-wide text-muted-foreground/70">
+                    {label}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+        {(view === "home" || view === "workspace") && <ProductWorkspace access={access} />}
+        {(view === "home" || view === "pricing") && (
+          <section className="border-t py-20 sm:py-28">
+            <div className="grid gap-10 lg:grid-cols-3">
+              <div>
+                <p className="mb-3 font-mono text-xs tracking-widest text-link">
+                  02 / START EXPLORING
+                </p>
+                <h2 className="text-3xl font-medium tracking-tight sm:text-4xl">
+                  {t("pricingTitle")}
+                  <br />
+                  {t("pricingAccent")}
+                </h2>
+                <p className="mt-5 max-w-xs text-sm leading-7 text-muted-foreground">
+                  {t("pricingBody")}
+                </p>
+                <p className="mt-4 text-xs leading-6 text-muted-foreground">{t("sandboxNotice")}</p>
+              </div>
+              <GlassSurface className="flex flex-col p-7">
+                <Box className="size-5 text-muted-foreground" />
+                <h3 className="mt-5 text-lg font-medium">Loom Explore</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{t("exploreBody")}</p>
+                <p className="mt-7 text-4xl tracking-tight">{t("free")}</p>
+                <ul className="my-7 space-y-3 text-sm text-muted-foreground">
+                  {[t("exploreBenefit1"), t("exploreBenefit2"), t("exploreBenefit3")].map((x) => (
+                    <li key={x} className="flex gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0" />
+                      {x}
+                    </li>
+                  ))}
+                </ul>
+                <Button asChild variant="outline" className="mt-auto w-full">
+                  <Link href="/workspace">
+                    {t("startExploring")}
+                    <ArrowRight />
+                  </Link>
+                </Button>
+              </GlassSurface>
+              <GlassSurface
+                intensity="raised"
+                className="relative flex flex-col border-link/40 p-7"
               >
-                <span className="text-sm text-slate-600">{example.label}</span>
-                <kbd className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
-                  {example.combo}
-                </kbd>
-              </li>
-            ))}
-          </ul>
+                <div className="flex items-center justify-between">
+                  <Command className="size-5 text-link" />
+                  <span className="rounded border border-link/30 bg-primary/10 px-2 py-1 text-xs text-link">
+                    {t("paymentMode")}
+                  </span>
+                </div>
+                <h3 className="mt-5 text-lg font-medium">Loom Pro</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{t("proBody")}</p>
+                <p className="mt-7 text-4xl tracking-tight">
+                  $1<span className="ml-2 text-xs text-muted-foreground">{t("testPayment")}</span>
+                </p>
+                <ul className="my-7 space-y-3 text-sm text-muted-foreground">
+                  {[t("proBenefit1"), t("proBenefit2"), t("proBenefit3")].map((x) => (
+                    <li key={x} className="flex gap-2">
+                      <Check className="mt-0.5 size-4 shrink-0 text-link" />
+                      {x}
+                    </li>
+                  ))}
+                </ul>
+                <Button asChild className="mt-auto w-full">
+                  {premium ? (
+                    <Link href="/workspace">
+                      {t("openPro")}
+                      <ArrowRight />
+                    </Link>
+                  ) : (
+                    <a href={access.profile?.user ? checkoutUrl : access.loginUrl}>
+                      {access.profile?.user ? t("unlock") : t("loginToUnlock")}
+                      <ArrowRight />
+                    </a>
+                  )}
+                </Button>
+              </GlassSurface>
+            </div>
+          </section>
+        )}
+        {view === "home" && (
+          <section className="loom-glass my-12 rounded-2xl px-6 py-16 text-center sm:my-16 sm:py-20">
+            <p className="mb-5 font-mono text-xs tracking-widest text-link">
+              THE NEXT THREAD STARTS WITH YOU
+            </p>
+            <h2 className="text-3xl font-medium tracking-tight sm:text-5xl">{t("closingTitle")}</h2>
+            <Button asChild size="lg" className="mt-8">
+              <Link href="/workspace">
+                {t("enterWorkspace")}
+                <ArrowUpRight />
+              </Link>
+            </Button>
+          </section>
+        )}
+      </main>
+      <footer className="border-t">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-6 py-8 lg:px-10">
+          <Brand compact />
+          <p className="text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Loom AI · {t("footerVision")}
+          </p>
+          <Link href="/pricing" className="text-xs text-muted-foreground hover:text-foreground">
+            {t("footerLink")}
+          </Link>
         </div>
-      </section>
-    </main>
+      </footer>
+    </div>
   );
 }

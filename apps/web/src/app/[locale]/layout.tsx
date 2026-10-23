@@ -1,0 +1,77 @@
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { notFound } from "next/navigation";
+import { NextIntlClientProvider } from "next-intl";
+import { AppearanceProvider } from "@hotkey-tools/ui";
+import { getMessagesForLocale } from "@hotkey-tools/i18n/server";
+import { isLocale, languageTag } from "@hotkey-tools/i18n/routing";
+import {
+  createPageMetadata,
+  SITE_NAME,
+  SITE_URL,
+  serializeJsonLd,
+  createSiteStructuredData,
+} from "@/shared/config/seo";
+import { ProductAccessProvider } from "@/features/product-workspace";
+import "../globals.css";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) notFound();
+  return {
+    ...createPageMetadata("/", locale),
+    metadataBase: new URL(SITE_URL),
+    applicationName: SITE_NAME,
+    verification: { google: "URwgNlwD6Yutc7w_L-YBUPlDlw1dFsqONwf5sMi72Cs" },
+    icons: { icon: "/loom.png", apple: "/loom.png" },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+    },
+  };
+}
+export default async function LocaleLayout({
+  children,
+  params,
+}: Readonly<{ children: React.ReactNode; params: Promise<{ locale: string }> }>) {
+  const { locale } = await params;
+  if (!isLocale(locale)) notFound();
+  const theme = (await cookies()).get("LOOM_THEME")?.value;
+  const initialTheme =
+    theme === "light" || theme === "dark" || theme === "system" ? theme : undefined;
+  return (
+    <html
+      lang={languageTag(locale)}
+      className={initialTheme === "system" ? undefined : (initialTheme ?? "dark")}
+      suppressHydrationWarning
+    >
+      <head>
+        <link
+          rel="describedby"
+          type="text/plain"
+          href={locale === "zh" ? "/zh/llms.txt" : "/llms.txt"}
+        />
+      </head>
+      <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(createSiteStructuredData(locale)) }}
+        />
+        <NextIntlClientProvider
+          locale={locale}
+          messages={await getMessagesForLocale(locale)}
+          timeZone="UTC"
+        >
+          <AppearanceProvider initialTheme={initialTheme}>
+            <ProductAccessProvider>{children}</ProductAccessProvider>
+          </AppearanceProvider>
+        </NextIntlClientProvider>
+      </body>
+    </html>
+  );
+}

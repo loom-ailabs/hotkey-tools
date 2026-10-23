@@ -5,8 +5,12 @@ import { getDatabase } from "./db";
 import { getEnv } from "./env";
 import { ApiError } from "./http";
 
-export const PRODUCT_KEY = "hotkey-tools";
-export const FEATURE_KEY = "premium-demo";
+import {
+  PRODUCT_KEY,
+  FEATURE_KEY,
+  hasPremiumInDatabase,
+} from "@hotkey-tools/identity-core/entitlements";
+export { PRODUCT_KEY, FEATURE_KEY } from "@hotkey-tools/identity-core/entitlements";
 const APPLICATION_KEY = "hotkey-tools-identity";
 const MAX_WEBHOOK_BYTES = 1_048_576;
 const REQUEST_ID_PATTERN =
@@ -46,7 +50,7 @@ export function getBillingConfig(env: Awaited<ReturnType<typeof getEnv>>): Billi
     throw new ApiError(503, "billing_not_configured", "Stripe Sandbox 尚未配置完整。");
   }
   if (!STRIPE_SECRET_KEY.startsWith("sk_test_") || !STRIPE_WEBHOOK_SECRET.startsWith("whsec_")) {
-    throw new ApiError(503, "sandbox_required", "此示例只接受 Stripe Sandbox 密钥。");
+    throw new ApiError(503, "sandbox_required", "当前仅接受 Stripe Sandbox 密钥。");
   }
   if (!STRIPE_PRICE_ID.startsWith("price_")) {
     throw new ApiError(503, "invalid_price_configuration", "请配置 Sandbox 中的单次固定价格。");
@@ -93,18 +97,6 @@ function invalidPayment(message = "Stripe 支付信息与本地订单不一致�
 export async function hasPremium(userId: string): Promise<boolean> {
   const db = await getDatabase();
   return hasPremiumInDatabase(db, userId);
-}
-
-async function hasPremiumInDatabase(db: D1Database, userId: string): Promise<boolean> {
-  const row = await db
-    .prepare(
-      `SELECT order_id FROM entitlements
-       WHERE user_id = ? AND product_key = ? AND feature_key = ? AND revoked_at IS NULL
-       LIMIT 1`,
-    )
-    .bind(userId, PRODUCT_KEY, FEATURE_KEY)
-    .first<{ order_id: string }>();
-  return row !== null;
 }
 
 export async function getOrderForUser(id: string, userId: string) {
@@ -156,7 +148,7 @@ export class BillingService {
 
     if (!order) {
       if (await hasPremiumInDatabase(this.db, user.id)) {
-        throw new ApiError(409, "already_unlocked", "此账号已经解锁示例高级功能。");
+        throw new ApiError(409, "already_unlocked", "Loom Pro 已向此账号开放。");
       }
       const price = await this.stripe.prices.retrieve(this.config.priceId);
       if (
