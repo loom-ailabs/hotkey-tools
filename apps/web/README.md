@@ -48,7 +48,7 @@ JSON 统一 `{code:0,msg:"success",data}` / `{code:正整数,msg,error:{type}}`�
 
 ### Git Builds 配置
 
-目标仓库为 [loom-ailabs/loom-web](https://github.com/loom-ailabs/loom-web)（GitHub 仓库由 `hotkey-tools` 更名）。Cloudflare 已保存生产分支为 `feat/production-cutover`，其余构建参数保持不变；分支变更不代替实际发布版本和流量的回读，当前记录见[生产切换说明](../../docs/production-cutover.md)。
+目标仓库为 [loom-ailabs/loom-web](https://github.com/loom-ailabs/loom-web)。Cloudflare 已保存生产分支为 `feat/production-cutover`，其余构建参数保持不变；分支变更不代替实际发布版本和流量的回读，当前记录见[生产切换说明](../../docs/production-cutover.md)。
 
 | 配置项          | 值                                                                     |
 | --------------- | ---------------------------------------------------------------------- |

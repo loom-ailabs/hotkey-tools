@@ -1,6 +1,6 @@
-# hotkey-tools
+# loom-web
 
-仓库包含 Loom AI 产品首页与工作区（`apps/web`）以及登录与购买应用（`apps/identity`）。两者分别使用 Next.js/OpenNext 提供页面与同源 API，共享 `.loom-labs.ai` 下的登录会话、Logto 身份与 Cloudflare D1 权益。默认 `mise run dev` 仍启动账户与购买应用；主站使用 `mise run dev-web`。
+[loom-web](https://github.com/loom-ailabs/loom-web) 包含 Loom AI 产品首页与工作区（`apps/web`）以及登录与购买应用（`apps/identity`）。两者分别使用 Next.js/OpenNext 提供页面与同源 API，共享 `.loom-labs.ai` 下的登录会话、Logto 身份与 Cloudflare D1 权益。默认 `mise run dev` 仍启动账户与购买应用；主站使用 `mise run dev-web`。
 
 从初始化、身份源配置到支付联调的步骤见 [Identity 应用说明](apps/identity/README.md)。仓库工作约定见 [AGENTS.md](AGENTS.md)。
 
@@ -18,6 +18,8 @@
 | `packages/python/hotkey-core` | Python、uv workspace                                          | Python 共享业务库                                         |
 
 新产品使用 `apps/<产品名>` 下的独立 Next.js 全栈应用。共享认证、HTTP 与权益查询位于 `packages/identity-core`；Stripe 逻辑只在 `apps/identity`。旧 `apps/worker` 使用自己的静态占位页与示例 API。Python 仅在实际需要时作为独立能力服务使用。
+
+仓库更名不改变现有包名和运行标识：文档中的 `@hotkey-tools/*`、`hotkey-tools-core`、数据库名及订单业务标识仍与实际配置一致；历史部署记录保留当时的资源名称。
 
 ## 初始化与日常开发
 

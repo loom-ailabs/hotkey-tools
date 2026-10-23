@@ -1,6 +1,6 @@
 # 项目工作约定
 
-本文件是 hotkey-tools 的仓库级工程规范。修改代码前先阅读；子目录存在更具体的 `AGENTS.md` 时，同时遵守。用户当次明确要求优先。
+本文件是 loom-web 的仓库级工程规范。修改代码前先阅读；子目录存在更具体的 `AGENTS.md` 时，同时遵守。用户当次明确要求优先。
 
 本规范参考 evals-grader 的 Evals Admin 前端技术栈、Feature-Sliced Design、Next.js 服务端边界、共享 UI 和验证约定，并按本仓库的 Cloudflare、Logto、Stripe 与 Python workspace 实际情况调整。不要照搬该项目的业务模块、内部基础设施、端口或未安装技能路径。
 
