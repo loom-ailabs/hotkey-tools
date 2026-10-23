@@ -40,13 +40,32 @@ mise run web:deploy-dry-run
 
 JSON 统一 `{code:0,msg:"success",data}` / `{code:正整数,msg,error:{type}}`，均为 private/no-store 且 noindex。`GET /api/me` 返回 `{user:{id,name?,email?,picture?}|null,entitlements:{premium:boolean}}`。`GET /api/premium` 每次验证会话和 D1：匿名 401、无有效授权 403、有授权 200 `{unlocked:true,message}`。`POST /api/auth/logout` 只接受本产品准确 Origin，先撤销 D1 共享会话，再尽力撤销上游令牌，finally 清 Cookie，最终 303 登出；不因共享 Cookie 而放宽 CORS/CSRF。当前 SID 的复制件在撤销后也失效，刷新或已知关联流程的迟到回调不能使其恢复；不宣称退出其他设备或撤销无关联的独立新授权。
 
-部署复用既有 Worker `vite-react-template` 与 WWW 自定义域。公开 Variables 包括 APP_URL、LOGIN_URL、AUTH_SUCCESS_URL、LOGTO_ENDPOINT、LOGTO_USER_NAMESPACE、LOGTO_APP_ID、LOGTO_COOKIE_DOMAIN；Secret 仅 LOGTO_APP_SECRET 和与 identity 相同的 LOGTO_COOKIE_SECRET，不包含 Stripe。后者作为 D1 状态加密的密钥派生输入保留。部署本轮代码前先由 identity 应用 `0002_sessions.sql`，两应用必须绑定同一份会话数据库。真正 OIDC 回调只登记中央 `https://login.loom-labs.ai/api/auth/callback`，其他旧回调暂留登记但产品服务拒绝非中央主机回调。
+`wrangler.jsonc` 的部署目标为 Worker `loom-web`。2026-10-23 已将既有 `vite-react-template` 原地更名，继续承载 `www.loom-labs.ai`。公开 Variables 包括 APP_URL、LOGIN_URL、AUTH_SUCCESS_URL、LOGTO_ENDPOINT、LOGTO_USER_NAMESPACE、LOGTO_APP_ID、LOGTO_COOKIE_DOMAIN；Secret 仅 LOGTO_APP_SECRET 和与 identity 相同的 LOGTO_COOKIE_SECRET，不包含 Stripe。后者作为 D1 状态加密的密钥派生输入保留。部署本轮代码前先由 identity 应用 `0002_sessions.sql`，两应用必须绑定同一份会话数据库。真正 OIDC 回调只登记中央 `https://login.loom-labs.ai/api/auth/callback`，其他旧回调暂留登记但产品服务拒绝非中央主机回调。
 
 父域会话发送给所有子域，须将其视为同一信任域。端到端验收仍须使用真实浏览器证明登录、跨产品识别、支付、退款撤权和共享退出；构建与合成 Cookie 运输测试各有独立证据边界。
 
+### Git Builds 配置
+
+目标仓库为 [loom-ailabs/hotkey-tools](https://github.com/loom-ailabs/hotkey-tools)。生产暂用已部署代码所在的 `feat/session-renewal`；`main` 尚不包含本轮最新 WWW，合并并验证后再切换生产分支。
+
+| 配置项          | 值                                                                     |
+| --------------- | ---------------------------------------------------------------------- |
+| Worker          | `loom-web`，与 Wrangler 的 `name` 一致                                 |
+| 生产分支        | `feat/session-renewal`                                                 |
+| Root directory  | `apps/web`                                                             |
+| Build command   | `(cd ../.. && pnpm install --frozen-lockfile) && pnpm cf:build`        |
+| Deploy command  | `pnpm exec opennextjs-cloudflare deploy`                               |
+| Build variables | `NODE_VERSION=24`、`PNPM_VERSION=12.10.1`、`SKIP_DEPENDENCY_INSTALL=1` |
+
+工具版本对应仓库 `.mise.toml` 与根 `packageManager`；Wrangler 使用应用直接依赖的 `4.151.2`。Cloudflare 的 Root directory 决定构建与部署命令的工作目录；显式关闭自动安装后，上述命令先回到仓库根，按唯一 `pnpm-lock.yaml` 安装整个 workspace，再返回 `apps/web` 执行 `pnpm cf:build`。如果平台另有独立安装步骤，可在那里从仓库根执行 `pnpm install --frozen-lockfile`，应用构建命令保持 `pnpm cf:build`。此约定基于 [Workers Builds 配置](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/)与[构建镜像的版本覆盖、安装开关](https://developers.cloudflare.com/workers/ci-cd/builds/build-image/)。
+
+部署命令直接使用已生成的 OpenNext 产物，不再次调用包含构建的 `pnpm run deploy`。Logto 凭据继续保存在 Worker 运行时 Secret，不填入构建变量或 dotenv 文件；Git 构建不执行远端 D1 迁移。云端仍需回查仓库授权、生产分支、命令与工具版本、既有域名和 D1/Secret 保留情况，并以首次 Git 构建日志、实际版本及流量读回作为完成证据；本地配置修改不代表自动发布已通过。
+
 ## 验证状态
 
-本轮英文默认、正式产品文案、导航状态复用与图标调整已发布。全仓 `mise run verify` 返回 0；identity-core 263、identity 149、web 32、i18n 10，共 454 项通过，旧 Worker 4 项另计。本地实际 Workerd 共享会话 9/9、本地 HTTP 67/67、线上独立 HTTP 67/67 通过。WWW 当前版本为 `a39d3bf2-e75b-492c-9af7-fe3cb14ac9a0`，identity 为 `17aeae33-1ab4-450e-af1e-074e7a690576`，部署读回均为 100% 流量。公开正文、八个双语 URL、旧 `/en` 查询保留跳转、私有页面与 API 拒绝边界均已核对。
+以下为更名前的历史验收，不代表 Git Builds 已验证。后续玻璃界面与主题首帧的发布记录见[视觉系统](../../docs/visual-system.md)。
+
+此前英文默认、正式产品文案、导航状态复用与图标调整已发布。全仓 `mise run verify` 返回 0；identity-core 263、identity 149、web 32、i18n 10，共 454 项通过，旧 Worker 4 项另计。本地实际 Workerd 共享会话 9/9、本地 HTTP 67/67、线上独立 HTTP 67/67 通过。当时 WWW 版本为 `a39d3bf2-e75b-492c-9af7-fe3cb14ac9a0`，identity 为 `17aeae33-1ab4-450e-af1e-074e7a690576`，部署读回均为 100% 流量。公开正文、八个双语 URL、旧 `/en` 查询保留跳转、私有页面与 API 拒绝边界均已核对。
 
 真实浏览器验证 GitHub 完整返回 `/workspace?source=login-polish&keep=a%2Bb`；客户端从愿景进入工作区不重复读取 `/api/me`，本地手动刷新增加一次读取。菜单图标、头像点击范围、居中登录与默认自动轮播均已检查。Google 已经官方账号选择和 Logto 回调进入 WWW，识别为此前同一身份；Logto 用户设置只读显示既有 GitHub、Google 连接，本轮未执行关联、合并或连接编辑。Google 登录后三域识别同一用户且 premium=false，随后统一退出后三域均匿名；再次 GitHub 登录返回 WWW 根路径成功。以下版本及测试保留为历史。
 

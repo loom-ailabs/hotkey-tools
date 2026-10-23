@@ -203,7 +203,9 @@ mise identity preview
 
 ## Cloudflare 部署
 
-Worker 配置位于 `wrangler.jsonc`，入口为 `.open-next/worker.js`，静态资源为 `.open-next/assets`，D1 binding 为 `DB`。默认不配置 R2 缓存，动态用户数据不使用共享缓存。参考 [Cloudflare Next.js](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/)和 [OpenNext 配置](https://opennext.js.org/cloudflare/get-started)。
+`wrangler.jsonc` 的目标 Worker 名为 `loom-identity`，入口为 `.open-next/worker.js`，静态资源为 `.open-next/assets`，D1 binding 为 `DB`。D1 数据库仍名为 `hotkey-tools-identity`，其 ID、迁移命令和既有数据不随 Worker 更名。默认不配置 R2 缓存，动态用户数据不使用共享缓存。参考 [Cloudflare Next.js](https://developers.cloudflare.com/workers/framework-guides/web-apps/nextjs/)和 [OpenNext 配置](https://opennext.js.org/cloudflare/get-started)。
+
+2026-10-23 已将 Cloudflare 中既有 `hotkey-tools-identity` Worker 原地更名为 `loom-identity`，本地 `name` 与云端一致。更名后回读确认既有部署仍承接 100% 流量，Secrets、D1 binding 及 `login.loom-labs.ai` / `checkout.loom-labs.ai` 自定义域名保留。后续类似迁移不要仅修改 `name` 后直接部署，以免创建另一 Worker；应先完成云端原地更名并回查绑定。Secrets 只核对名称，不输出值；不改会话密钥、Logto 参数、Stripe Webhook 或其他业务标识。
 
 在仓库根目录执行：
 
