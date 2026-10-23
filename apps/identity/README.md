@@ -4,7 +4,7 @@
 
 Logto 负责认证和短期令牌刷新，D1 保存可撤销会话、用户、订单和权益，Stripe Sandbox 负责测试付款。付费权限由业务数据库判断，不依赖 Logto 的 RBAC 或自定义 API resources。开发租户可用功能不能代替生产 Free 套餐的验证。
 
-线上使用的 Logto 租户、数据库及对象配置进度统一见[生产切换说明](../../docs/production-cutover.md)。用户决定本次继续 Sandbox，Live 关闭；未来 USD 1.00 正式单次购买仅完成代码准备。
+线上已发布 Logto 生产 Free 身份与独立 D1，真实登录和新库付款联调进行中；对象与版本统一见[生产切换说明](../../docs/production-cutover.md)。本次继续 Sandbox，Live 关闭；未来 USD 1.00 正式单次购买仅完成代码准备。
 
 ## 中英文与外观
 
@@ -111,7 +111,7 @@ LOGTO_USER_NAMESPACE=https://kpy72v.logto.app
 3. 复制该 connector 显示的 Callback URI，登记到对应供应商的应用中。这里填写的是 **Logto 的 connector 回调**，不是本应用的 `/api/auth/callback`。
 4. 在 Logto 的 Sign-up and sign-in 中启用已配置的 connector，保存后再测试登录按钮。
 
-本次 Google/GitHub 均已登记 auth.loom-labs.ai 下的 connector 回调，默认 kpy72v.logto.app 回调保留作备用。两供应商均已保存 auth 与默认备用回调，并清理临时 login.loom-labs.ai 回调；Logto 中该临时域名映射也已移除，不作为有效入口。
+此前开发租户的 Google/GitHub 登记 auth.loom-labs.ai 与 kpy72v.logto.app 回调；生产租户使用 `5z8hdi.logto.app` 下的新 connector 回调，精确 ID 和 URI 见[对象表](../../docs/production-cutover.md)。产品 login 回调不能替代上游 connector 回调，旧开发配置不作为生产备用身份源。
 
 Google 的测试受众需要包含实际测试账号；所需设置以该 OAuth 应用的受众、发布状态和 scope 为准。已有 Google OAuth client 可在允许的情况下新增 Logto 回调；GitHub OAuth App 按当前控制台登记准确回调，不覆盖其他应用仍在使用的地址，并禁用 wildcard。不要假定不同类型或版本的供应商应用具有相同的回调数量限制。
 
@@ -121,9 +121,9 @@ Google 的测试受众需要包含实际测试账号；所需设置以该 OAuth 
 
 Logto 开发/生产租户由用户预先创建。以下记录属于此前开发租户验收：Google OAuth 测试受众新增 1 名自用账号，Google/GitHub 演示连接器均已替换为专用配置；GitHub 已在新旧入口完成真实登录。生产对象与当前切换状态以[生产切换说明](../../docs/production-cutover.md)为准，不把开发身份源的验收当作生产已完成。
 
-早期 Google 测试曾到达同邮箱账号的显式关联页，并按用户选择停止该分支。本轮 Google 已从官方账号选择、Logto 回调进入 WWW，应用识别为此前同一身份；Logto 用户设置的只读检查显示已有 GitHub 与 Google 连接。本轮未执行关联、合并或连接编辑，不能据此声称本轮创建了连接，也不以邮箱自动合并账号。 Google 登录后三域均识别同一用户且 premium=false，随后统一退出后三域匿名；再次 GitHub 登录已返回 WWW 根路径。
+早期开发租户 Google 测试曾到达同邮箱账号的显式关联页，并按用户选择停止该分支。后续开发租户验收中，Google 已从官方账号选择、Logto 回调进入 WWW，应用识别为此前同一身份；只读设置显示当时已有 GitHub 与 Google 连接，该轮未执行关联、合并或连接编辑。该历史 Google/GitHub 三域识别与退出记录不代表本次生产租户完整登录已通过；生产同邮箱自动关联已关闭。
 
-托管页面已在开发租户保存浅深主色、Dark mode 与 [Custom CSS](../../docs/logto-branding.css)；真实 GitHub 回调已观察到内联 CSS 和 Loom 加载装饰。原生 Company logo/Favicon 字段本轮未配置，开发环境提示与 Powered by Logto 保留。配置范围和回滚见[Logto 品牌配置](../../docs/logto-branding.md)。
+生产 Free 租户已保存并重载浅深主色、Dark mode 与 [Custom CSS](../../docs/logto-branding.css)。此前开发租户真实 GitHub 回调的内联 CSS 和 Loom 装饰仅作历史效果记录；生产本轮尚待完整授权验收。原生 Company logo/Favicon 未上传，Powered by Logto 保留，未启用 Pro。配置范围与回滚见[Logto 品牌配置](../../docs/logto-branding.md)。
 
 开发租户包含开发标识和用户数据保留限制，不作为生产用户库。正式上线应单独核实套餐、配额和迁移安排。参考 [Logto 租户说明](https://docs.logto.io/logto-cloud/tenant-settings)。
 

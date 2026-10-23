@@ -1,18 +1,18 @@
 # 搜索与 AI 阅读入口
 
-Loom AI 的四个公开页面提供中英文共八个可抓取 URL、独立元数据和机器阅读入口。当前工作区提供人工整理的静态计划。已准备的代码按服务端 `STRIPE_MODE` 选择支付说明，test 明确不真实扣款，live 使用 USD 1.00 单次购买文案；用户本次决定继续 Sandbox，Live 关闭，不能将价格代码准备写成已可收取正式款项。身份与支付切换进度见[统一记录](production-cutover.md)。代码配置、已发布站点、搜索引擎抓取、索引和排名分别验证。
+Loom AI 的六个公开页面提供中英文共十二个可抓取 URL、独立元数据和机器阅读入口。当前工作区提供人工整理的静态计划。已准备的代码按服务端 `STRIPE_MODE` 选择支付说明，test 明确不真实扣款，live 使用 USD 1.00 单次购买文案；用户本次决定继续 Sandbox，Live 关闭，不能将价格代码准备写成已可收取正式款项。身份与支付切换进度见[统一记录](production-cutover.md)。代码配置、已发布站点、搜索引擎抓取、索引和排名分别验证。
 
 ## 已实现的入口
 
-| 入口                                                       | 当前行为                                                                                                                                                    |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`、`/vision`、`/workspace`、`/pricing` 及对应 `/zh` 路径 | 英文默认无前缀，中文使用 `/zh`，正文由 Next.js 首次渲染；输出对应语言的标题、描述、canonical 和 hreflang。公开介绍可匿名阅读，工作区权益仍由私有 API 校验。 |
-| 分享元数据                                                 | 每页 Open Graph 和 Twitter Card 使用同页绝对地址、对应语言和模式文案及原有 1254×1254 `/loom.png`，不重绘 Logo。                                             |
-| JSON-LD                                                    | `Organization` 与 `WebSite` 只包含实际品牌、站点、语言及 Logo；输出前转义 `<`。没有虚构评分、评论、地址、商业 Offer 或真实模型能力。                        |
-| `/robots.txt`                                              | 允许公共内容抓取，并指向本站 sitemap。私有 API 通过认证、`private, no-store` 及 `X-Robots-Tag: noindex, nofollow, noarchive` 控制，不依靠 robots 隐藏信息。 |
-| `/sitemap.xml`                                             | 列出四页两种语言的八个公开 canonical URL；不列登录回调、用户、订单或支付接口。没有可靠内容更新时间时不生成虚假的 `lastmod`。                                |
-| `/llms.txt`                                                | Markdown 格式的站点说明、四个公开页面入口与纯文本正文链接，供主动支持该约定的 agent 使用。                                                                  |
-| `/llms-full.txt`                                           | 四个页面的精简公开说明；只含产品方向、工作计划、当前支付模式与能力边界，按请求读取公开模式配置，不读取会话或数据库。                                        |
+| 入口                                                                             | 当前行为                                                                                                                                                    |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`、`/vision`、`/workspace`、`/pricing`、`/privacy`、`/terms` 及对应 `/zh` 路径 | 英文默认无前缀，中文使用 `/zh`，正文由 Next.js 首次渲染；输出对应语言的标题、描述、canonical 和 hreflang。公开介绍可匿名阅读，工作区权益仍由私有 API 校验。 |
+| 分享元数据                                                                       | 每页 Open Graph 和 Twitter Card 使用同页绝对地址、对应语言和模式文案及原有 1254×1254 `/loom.png`，不重绘 Logo。                                             |
+| JSON-LD                                                                          | `Organization` 与 `WebSite` 只包含实际品牌、站点、语言及 Logo；输出前转义 `<`。没有虚构评分、评论、地址、商业 Offer 或真实模型能力。                        |
+| `/robots.txt`                                                                    | 允许公共内容抓取，并指向本站 sitemap。私有 API 通过认证、`private, no-store` 及 `X-Robots-Tag: noindex, nofollow, noarchive` 控制，不依靠 robots 隐藏信息。 |
+| `/sitemap.xml`                                                                   | 列出六页两种语言的十二个公开 canonical URL；不列登录回调、用户、订单或支付接口。没有可靠内容更新时间时不生成虚假的 `lastmod`。                              |
+| `/llms.txt`                                                                      | Markdown 格式的站点说明、六个公开页面入口与纯文本正文链接，供主动支持该约定的 agent 使用。                                                                  |
+| `/llms-full.txt`                                                                 | 六个页面的精简公开说明；只含产品方向、工作计划、当前支付模式与能力边界，按请求读取公开模式配置，不读取会话或数据库。                                        |
 
 元数据与公开内容集中在 `apps/web/src/shared/config/seo.ts`。新增公开页面时同时维护 canonical、sitemap 和正文；产品能力变化时更新公开正文，避免 HTML 与纯文本描述分歧。Next.js 使用官方 [Metadata API](https://nextjs.org/docs/app/api-reference/functions/generate-metadata)、[robots](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots)、[sitemap](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap)和 [JSON-LD 输出方式](https://nextjs.org/docs/app/guides/json-ld)。
 

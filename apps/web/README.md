@@ -4,7 +4,7 @@
 
 登录统一由 `login.loom-labs.ai` 发起，使用 `LOGTO_ENDPOINT` 指定的 Logto。WWW、checkout、login 在同一环境内使用同一 D1、app ID、endpoint、会话密钥与固定租户命名空间。生产 Cookie `__Secure-loom_sid_<appId>` 只保存随机会话标识，设置 `Domain=.loom-labs.ai; Path=/; HttpOnly; Secure; SameSite=Lax`；SDK 令牌状态加密保存在 D1。10 分钟登录流程使用相同属性的 `__Secure-loom_flow_<appId>`。
 
-运行中的 Logto、D1 及新应用配置进度统一见[生产切换说明](../../docs/production-cutover.md)。本次继续 `STRIPE_MODE=test`，Live 关闭；未来 USD 1.00 单次正式购买只完成代码准备。
+Logto 生产 Free 身份与独立 D1 已发布，真实联调进行中；对象、实际版本和验收状态统一见[生产切换说明](../../docs/production-cutover.md)。本次继续 `STRIPE_MODE=test`，Live 关闭；未来 USD 1.00 单次正式购买只完成代码准备。
 
 会话从成功回调起最多保留 14 天，刷新短期令牌不会延长该截止时间。服务端按需通过官方 SDK 自动刷新，并重新检查身份，页面和 RSC 不需要重写 Cookie。刷新结果不确定或租约过期时拒绝继续使用；清除 Cookie、退出或上游失效也可能在 14 天前要求登录。旧自包含父域 Cookie 和 `logto_<appId>` 主机 Cookie 不再接受，已有用户需一次重新登录；详见[会话生命周期](../../docs/session-lifecycle.md)。
 
@@ -48,12 +48,12 @@ JSON 统一 `{code:0,msg:"success",data}` / `{code:正整数,msg,error:{type}}`�
 
 ### Git Builds 配置
 
-目标仓库为 [loom-ailabs/loom-web](https://github.com/loom-ailabs/loom-web)（GitHub 仓库由 `hotkey-tools` 更名）。生产暂用已部署代码所在的 `feat/session-renewal`；`main` 尚不包含本轮最新 WWW，合并并验证后再切换生产分支。
+目标仓库为 [loom-ailabs/loom-web](https://github.com/loom-ailabs/loom-web)（GitHub 仓库由 `hotkey-tools` 更名）。Cloudflare 已保存生产分支为 `feat/production-cutover`，其余构建参数保持不变；分支变更不代替实际发布版本和流量的回读，当前记录见[生产切换说明](../../docs/production-cutover.md)。
 
 | 配置项          | 值                                                                     |
 | --------------- | ---------------------------------------------------------------------- |
 | Worker          | `loom-web`，与 Wrangler 的 `name` 一致                                 |
-| 生产分支        | `feat/session-renewal`                                                 |
+| 生产分支        | `feat/production-cutover`                                              |
 | Root directory  | `apps/web`                                                             |
 | Build command   | `(cd ../.. && pnpm install --frozen-lockfile) && pnpm cf:build`        |
 | Deploy command  | `pnpm exec opennextjs-cloudflare deploy`                               |

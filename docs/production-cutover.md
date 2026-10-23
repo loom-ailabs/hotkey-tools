@@ -1,22 +1,42 @@
 # 生产身份切换与支付模式
 
-## 当前状态：准备中，尚未切换
+## 当前状态与验收：已发布，真实联调进行中
 
-截至本记录，线上网站仍使用 Logto 开发租户 `kpy72v` 和 Stripe Sandbox。用户因 Stripe 商户暂时无法激活，已决定继续使用 `STRIPE_MODE=test`；Live 未开启。USD 1.00 单次购买已作为未来正式价格写入代码校验，但不代表已能收取真实款项。Logto 生产身份和 Stripe Live 是两项独立配置，切换前者不要求开启后者。
+两 Worker 已实际切换至 Logto 生产 Free 租户 `5z8hdi` 和独立生产 D1，并回读确认各承接 100% 流量。Stripe 继续使用原 Sandbox，`STRIPE_MODE=test`，Live 未开启。USD 1.00 单次购买已作为未来正式价格写入代码校验，但不代表已能收取真实款项。生产身份与测试支付是本次实际组合，不能把两者混称为 Live。
 
-以下集中记录本轮进度；其他 README 中的旧版本、登录、付款和退款验收均为历史，不作为生产租户已上线的证明。
+| 验收项            | 已发生事实与边界                                                                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 代码              | [20b8b40c3b466f4b4abf502482d7b15f2d460539](https://github.com/loom-ailabs/loom-web/commit/20b8b40c3b466f4b4abf502482d7b15f2d460539) 已推送至 `feat/production-cutover` |
+| Worker 发布       | Identity `66a7533d-124c-4951-b328-aad2a01c8bdb`；WWW `84ef3b06-40f1-4969-9ff0-506dcbc528e2`；CLI 回读均为 100%                                                         |
+| Git Builds        | Cloudflare WWW 生产分支已保存为 `feat/production-cutover`，其余构建参数不变                                                                                            |
+| 全仓检查          | `verify-release` 返回 0；core 295、identity 237、web 69、i18n 14，共 615 项；旧 Worker 4 项另计                                                                        |
+| 覆盖率            | Identity statements/branches/functions/lines 为 99.58%/98.94%/100%/100%；core 为 98.27%/95.85%/100%/98.82%                                                             |
+| 本地运行时        | 新 Worker preview 8 项、共享会话 9 组通过；不替代真实第三方授权                                                                                                        |
+| 线上匿名 smoke    | WWW 26 项通过，Identity smoke 通过；法务四页 200、canonical/lang 与 sitemap 12 URL 检查共 5 项通过；不代替真实登录和付款                                               |
+| 生产租户真实登录  | GitHub 已到官方授权页，两种身份源的首次真实授权仍待用户确认；尚未完成应用回调、三域共享身份和统一退出验收                                                              |
+| 新库 Sandbox 购买 | 尚未验证新身份下的付款、重登持权和退款撤权；旧记录不作为本轮证据                                                                                                       |
 
-| 对象                  | 已完成                                                                                                      | 尚未完成                                                           |
-| --------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Logto 生产 Free 租户  | 使用用户已有租户 `5z8hdi`；已创建 Traditional Web 应用 `qc6kvqsqa3k4ti63rmom7`                              | 供应商配置、两 Worker 成组切换及真实登录验收                       |
-| 生产 endpoint         | 选定 `https://5z8hdi.logto.app`                                                                             | 应用运行配置切换；保留开发租户的 `auth.loom-labs.ai`，不转移该域名 |
-| Logto 应用回调        | `https://login.loom-labs.ai/api/auth/callback`；退出后地址登记 www、login、checkout 三个站点的 HTTPS 根地址 | 发布后实际回调和统一退出验收                                       |
-| 生产 D1               | `loom-identity-production`，ID `c6f250d7-ee2d-4436-a5dd-f4f4fe498546`；已应用 `0001`—`0004`                 | 尚未绑定线上 Worker；不得把创建及迁移完成写成网站已使用该库        |
-| GitHub 生产 OAuth App | App ID `3957442`，Client ID `Ov23liVefdIsdzOQpfmx` 已创建                                                   | 生产 Logto connector 的完整配置与真实授权验证                      |
-| Google 生产 OAuth     | 项目准备中                                                                                                  | 正式项目、OAuth client、受众、connector 及实际授权验证             |
-| Stripe                | 保留现有 Sandbox；代码已支持显式 test/live 与正式 USD 1.00 校验                                             | 商户激活和 Live 配置未完成，本次不启用 Live                        |
+以下对象配置和旧验收分开记录；后续真实联调结果更新本节，不将配置存在或旧租户登录成功当作本轮通过。
 
-上述 ID 均为定位对象的公开标识。认证与支付密钥只存于本地忽略的 `.dev.vars` 和 Cloudflare Secrets，不写入本记录、源码或构建变量。
+## 已配置对象
+
+| 对象                    | 当前配置                                                                                                                                                                                                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Logto 生产 Free 租户    | 用户已有租户 `5z8hdi`；Traditional Web 应用 `qc6kvqsqa3k4ti63rmom7` 已配置                                                                                                                                                                                |
+| 生产 endpoint/namespace | `https://5z8hdi.logto.app`；保留开发租户的 `auth.loom-labs.ai`，未转移该域名                                                                                                                                                                              |
+| Logto 应用回调          | `https://login.loom-labs.ai/api/auth/callback`；退出后地址为 `https://www.loom-labs.ai/`、`https://login.loom-labs.ai/`、`https://checkout.loom-labs.ai/`                                                                                                 |
+| 生产 D1                 | `loom-identity-production`，ID `c6f250d7-ee2d-4436-a5dd-f4f4fe498546`；已应用 `0001`—`0004`，两 Worker 已绑定                                                                                                                                             |
+| GitHub 生产 OAuth       | App ID `3957442`，Client ID `Ov23liVefdIsdzOQpfmx`；Logto connector `a4sqevygw4341j6b3zadw`；回调 `https://5z8hdi.logto.app/callback/a4sqevygw4341j6b3zadw`                                                                                               |
+| Google 生产 OAuth       | 项目 `loom-ai-identity-production`，编号 `671954727511`；Client ID `671954727511-8lrj48seh5b82fu8sal6c8j1ea6pkkdq.apps.googleusercontent.com`；最终 connector `l5o2f31l18kmn7re65jj3`；精确回调 `https://5z8hdi.logto.app/callback/l5o2f31l18kmn7re65jj3` |
+| 登录方式                | 已删除/替换两项演示 connector；仅 Google/GitHub 社交注册与登录，未启用 Discord，已移除邮箱密码，同邮箱自动关联关闭                                                                                                                                        |
+| Logto 品牌              | 生产租户已保存并重载：Dark mode 开启、浅色主色 `#3A72B3`、深色主色 `#8BBFFF`，复用仓库 CSS；未上传原生 Logo/Favicon，未启用 Pro                                                                                                                           |
+| Stripe                  | 保留同一 Sandbox 的 USD 1.00（100 cents）Price、测试密钥和 Webhook；Live 未开启                                                                                                                                                                           |
+
+Google connector 以本表最终 ID 为准，早期未保存的临时 ID 不作为有效对象。四个经用户批准的法务页面已上线并取得 200：[Privacy](https://www.loom-labs.ai/privacy)、[Terms](https://www.loom-labs.ai/terms)、[中文隐私说明](https://www.loom-labs.ai/zh/privacy)、[中文使用规则](https://www.loom-labs.ai/zh/terms)。Google 已登记 Privacy/Terms，并按用户批准正式发布 OAuth 应用；Audience 实际回读“发布状态：正式版”“用户类型：外部”，操作为“返回测试版”。这不等于品牌已验证；验证中心尚未检查。首次真实授权仍等待用户确认，尚不标记应用登录成功。
+
+切换前，旧库三笔 open Sandbox Session 已限定执行 expire，并由旧 Webhook 确认：pending 由 3 降为 0，expired 由 0 增为 3；paid=1、refunded=3、有效权益=1 均保持不变。旧库完整保留，这些测试历史和权益没有迁入新生产 D1。
+
+上述 ID 均为定位对象的公开标识。Google/GitHub OAuth 密钥保存在 Logto 连接器，生产应用与会话密钥保存在两个 Worker Secrets，Stripe 测试密钥仅配置到 Identity Worker；本地开发凭据使用忽略的 `.dev.vars`。密钥不写入本记录、源码或构建变量，临时配置文件在上传后清理。
 
 ## 支付模式与权益规则
 

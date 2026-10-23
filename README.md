@@ -4,7 +4,7 @@
 
 从初始化、身份源配置到支付联调的步骤见 [Identity 应用说明](apps/identity/README.md)。仓库工作约定见 [AGENTS.md](AGENTS.md)。
 
-当前运行环境、已准备对象与未完成的切换步骤统一记录在[生产切换说明](docs/production-cutover.md)。Logto 生产身份切换与 Stripe Live 分开处理；本次继续 Sandbox，正式 USD 1.00 仅作代码准备，不代表已开放真实付款。
+两 Worker 已发布 Logto 生产 Free 身份与独立 D1，真实联调进行中；对象、版本与验收状态统一记录在[生产切换说明](docs/production-cutover.md)。本次继续 Stripe Sandbox，Live 关闭，正式 USD 1.00 仅作代码准备，不代表已开放真实付款。
 
 ## 应用与共享包
 
@@ -128,7 +128,7 @@ mise exec -- pnpm deploy:examples
 
 [主站说明](apps/web/README.md)覆盖本地配置、共享会话和部署；[设计依据](docs/loom-product-design.md)记录 loom-box 愿景、原版 Logo、Linear 风格参考及当前能力边界。
 
-[Logto 品牌配置](docs/logto-branding.md)记录开发租户已保存的浅深主色、Custom CSS、实际加载效果及回滚。原生 Company logo/Favicon 字段本轮未配置；加载画面的标识仅为 CSS 装饰，不隐藏开发环境提示或 Powered by Logto，也不能消除协议重定向与上游页面。
+[Logto 品牌配置](docs/logto-branding.md)记录生产 Free 租户已保存并重载的浅深主色和 Custom CSS，以及此前开发租户的效果与回滚记录。原生 Company logo/Favicon 未上传；加载画面的标识仅为 CSS 装饰，不隐藏 Powered by Logto，也不能消除协议重定向与上游页面。
 
 [SEO 与 AI 检索说明](docs/seo-geo.md)记录公开页面的元数据、结构化数据、站点地图和 AI 文本入口，以及私人流程的索引限制与验证方式。
 
